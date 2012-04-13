@@ -11,3 +11,9 @@ config HFSPLUS_FS
 	  MacOS 8. It includes all Mac specific filesystem data such as
 	  data forks and creator codes, but it also has several UNIX
 	  style features such as file ownership and permissions.
+
+config HFSPLUS_JOURNAL
+	bool "HFSPLUS journal support"
+	depends on HFSPLUS_FS
+	help
+		Enabling journal support in HFSPlus file system.

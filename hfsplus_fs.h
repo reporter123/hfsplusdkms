@@ -23,13 +23,30 @@
 #define DBG_SUPER	0x00000010
 #define DBG_EXTENT	0x00000020
 #define DBG_BITMAP	0x00000040
+#ifdef CONFIG_HFSPLUS_JOURNAL
+#define DBG_JOURNAL	0x00000080
+#define DBG_JREPLAY	0x00000100
+#define DBG_JTRANS	0x00000200
+#endif
 
 #if 0
 #define DBG_MASK	(DBG_EXTENT|DBG_INODE|DBG_BNODE_MOD)
 #define DBG_MASK	(DBG_BNODE_MOD|DBG_CAT_MOD|DBG_INODE)
 #define DBG_MASK	(DBG_CAT_MOD|DBG_BNODE_REFS|DBG_INODE|DBG_EXTENT)
 #endif
+#ifdef CONFIG_HFSPLUS_JOURNAL
+#define DBG_MASK		(DBG_JOURNAL)
+
+#define HFSPLUS_JOURNAL_PRESENT			1
+#define HFSPLUS_JOURNAL_CONSISTENT		0
+#define HFSPLUS_JOURNAL_INCONSISTENT	1
+#define HFSPLUS_JOURNAL_UIBYTE			0x5A /* Unimportant byte value */
+#define HFSPLUS_JOURNAL_SUCCESS			0
+#define HFSPLUS_JOURNAL_FAIL				1
+#define HFSPLUS_JOURNAL_SWAP				1
+#else
 #define DBG_MASK	(0)
+#endif
 
 #define dprint(flg, fmt, args...) \
 	if (flg & DBG_MASK) \
@@ -103,6 +120,60 @@ struct hfs_bnode {
 #define HFS_BNODE_DIRTY		3
 #define HFS_BNODE_DELETED	4
 
+#ifdef CONFIG_HFSPLUS_JOURNAL
+/* An HFS+ Journal held in memory */
+struct hfsplus_journal;
+
+struct hfsplus_transaction {
+	unsigned char *tbuf;
+	u32 tbuf_size;
+	struct hfsplus_block_list_header *blhdr;
+	struct hfsplus_block_info *binfo;
+	u32 num_blhdrs;
+	u32 total_bytes;
+	u32 num_flushed;
+	u32 num_killed;
+	u64 sector_number;
+	u64 journal_start;
+	u64 journal_end;
+	u32 sequence_num;
+	struct hfsplus_journal *jnl;
+	struct list_head list;
+};
+
+struct hfsplus_journal {
+	struct semaphore jnl_lock;
+	u32 journaled;
+	u32 flags;
+
+	/* Journal info block specific */
+	struct buffer_head *jib_bh;
+	struct hfsplus_journal_info_block *jibhdr;
+	u64 jib_offset;
+
+	/* Journal header specific */
+	struct buffer_head *jh_bh;
+	u32 jh_bh_size;
+	u64 jh_offset;
+	struct hfsplus_journal_header *jhdr;
+
+	/* Link list of meta-data transaction */
+	struct list_head tr_list;
+
+	/* Pointer to the last transaction */
+	struct hfsplus_transaction *active_tr;
+
+	/* block number of meta-data */
+	u32 ext_block;
+	u32 alloc_block;
+	u32 catalog_block;
+	u32 attr_block;
+
+	struct super_block *sbp;
+	u32 sequence_num;
+};
+#endif /* CONFIG_HFSPLUS_JOURNAL */
+
 /*
  * HFS+ superblock info (built from Volume Header on disk)
  */
@@ -129,6 +200,9 @@ struct hfsplus_sb_info {
 	int fs_shift;
 
 	/* immutable data from the volume header */
+#ifdef CONFIG_HFSPLUS_JOURNAL
+	struct hfsplus_journal jnl;
+#endif
 	u32 alloc_blksz;
 	int alloc_blksz_shift;
 	u32 total_blocks;
@@ -450,6 +524,19 @@ int hfsplus_read_wrapper(struct super_block *);
 int hfs_part_find(struct super_block *, sector_t *, sector_t *);
 int hfsplus_submit_bio(struct super_block *sb, sector_t sector,
 		void *buf, void **data, int rw);
+#ifdef CONFIG_HFSPLUS_JOURNAL
+/* journal.c */
+void hfsplus_journaled_init(struct super_block *, struct hfsplus_vh *);
+void hfsplus_journaled_deinit(struct super_block *);
+int hfsplus_journaled_create(struct super_block *);
+int hfsplus_journaled_check(struct super_block *);
+int hfsplus_journaled_start_transaction(struct page *, struct super_block *);
+void hfsplus_journaled_end_transaction(struct page *, struct super_block *);
+void print_volume_header(struct super_block *);
+
+/* extents.c */
+int hfsplus_journaled_get_block(struct page *page);
+#endif /* CONFIG_HFSPLUS_JOURNAL */
 
 /* time macros */
 #define __hfsp_mt2ut(t)		(be32_to_cpu(t) - 2082844800U)

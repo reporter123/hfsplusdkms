@@ -251,6 +251,10 @@ static void hfsplus_put_super(struct super_block *sb)
 	hfs_btree_close(sbi->ext_tree);
 	iput(sbi->alloc_file);
 	iput(sbi->hidden_dir);
+	#ifdef CONFIG_HFSPLUS_JOURNAL
+	hfsplus_journaled_deinit(sb);
+	#endif
+	
 	kfree(sbi->s_vhdr_buf);
 	kfree(sbi->s_backup_vhdr_buf);
 	unload_nls(sbi->nls);
@@ -306,11 +310,21 @@ static int hfsplus_remount(struct super_block *sb, int *flags, char *data)
 			*flags |= MS_RDONLY;
 		} else if (vhdr->attributes &
 				cpu_to_be32(HFSPLUS_VOL_JOURNALED)) {
+#ifndef CONFIG_HFSPLUS_JOURNAL /* TODO: place of this function should be above unmount check */
 			printk(KERN_WARNING "hfs: filesystem is "
 					"marked journaled, "
 					"leaving read-only.\n");
 			sb->s_flags |= MS_RDONLY;
 			*flags |= MS_RDONLY;
+#else
+                       if (hfsplus_journaled_check(sb)) {
+                               printk("HFS+-fs: Filesystem is marked journaled, leaving read-only.\n");
+                               sb->s_flags |= MS_RDONLY;
+                               *flags |= MS_RDONLY;
+                       } else
+                               printk("HFS+-fs: Able to mount journaled hfsplus volume in read-write mode. Journaling is temporarily switched off.\n");
+#endif
+
 		}
 	}
 	return 0;
@@ -339,7 +353,10 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 	struct qstr str;
 	struct nls_table *nls = NULL;
 	int err;
-
+#ifdef CONFIG_HFSPLUS_JOURNAL
+	int jnl_ret;
+#endif
+	
 	err = -EINVAL;
 	sbi = kzalloc(sizeof(*sbi), GFP_KERNEL);
 	if (!sbi)
@@ -379,6 +396,22 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		printk(KERN_ERR "hfs: wrong filesystem version\n");
 		goto out_free_vhdr;
 	}
+#ifdef CONFIG_HFSPLUS_JOURNAL
+	hfsplus_journaled_init(sb, vhdr);
+	if (sbi->jnl.journaled == HFSPLUS_JOURNAL_PRESENT) {
+		if (hfsplus_journaled_check(sb)) {
+			if (!silent)
+				printk("HFS+-fs: Error in journal, use the force option at your own risk, mounting read-only.\n");
+			if (sbi->s_vhdr == NULL) {
+				printk("HFS+-fs: Error in Volume Header\n");
+				goto out_free_vhdr;
+			}
+			sb->s_flags |= MS_RDONLY;
+		} else
+			dprint(DBG_JOURNAL, "HFS+-fs: No problem in journal. Should be able to mount hfsplus volume in read-write mode\n");
+	}
+#endif /* CONFIG_HFSPLUS_JOURNAL */
+	
 	sbi->total_blocks = be32_to_cpu(vhdr->total_blocks);
 	sbi->free_blocks = be32_to_cpu(vhdr->free_blocks);
 	sbi->next_cnid = be32_to_cpu(vhdr->next_cnid);
@@ -410,11 +443,13 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		sb->s_flags |= MS_RDONLY;
 	} else if ((vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_JOURNALED)) &&
 			!(sb->s_flags & MS_RDONLY)) {
+#ifndef CONFIG_HFSPLUS_JOURNAL
 		printk(KERN_WARNING "hfs: write access to "
 				"a journaled filesystem is not supported, "
 				"use the force option at your own risk, "
 				"mounting read-only.\n");
 		sb->s_flags |= MS_RDONLY;
+#endif /* CONFIG_HFSPLUS_JOURNAL */
 	}
 
 	/* Load metadata objects (B*Trees) */
@@ -467,6 +502,12 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		 * H+LX == hfsplusutils, H+Lx == this driver, H+lx is unused
 		 * all three are registered with Apple for our use
 		 */
+#ifdef CONFIG_HFSPLUS_JOURNAL
+		if (sbi->jnl.journaled == HFSPLUS_JOURNAL_PRESENT) {
+			vhdr->last_mount_vers = cpu_to_be32(HFSP_MOUNT_JOURNALED_VERSION);
+		}
+		else
+#endif
 		vhdr->last_mount_vers = cpu_to_be32(HFSP_MOUNT_VERSION);
 		vhdr->modify_date = hfsp_now2mt();
 		be32_add_cpu(&vhdr->write_count, 1);

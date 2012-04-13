@@ -46,6 +46,10 @@
 #define HFSP_SYMLINK_CREATOR	0x72686170	/* 'rhap' */
 
 #define HFSP_MOUNT_VERSION	0x482b4c78	/* 'H+Lx' */
+#define CONFIG_HFSPLUS_JOURNAL 1 /* for out-of-tree build */
+#ifdef CONFIG_HFSPLUS_JOURNAL
+#define HFSP_MOUNT_JOURNALED_VERSION 0x4846534A /* 'H+SJ */
+#endif /* CONFIG_HFSPLUS_JOURNAL */
 
 /* Structures used on disk */
 
@@ -95,8 +99,12 @@ struct hfsplus_vh {
 	__be16 version;
 	__be32 attributes;
 	__be32 last_mount_vers;
+	#ifndef CONFIG_HFSPLUS_JOURNAL
 	u32 reserved;
-
+	#else
+	__be32 journal_info_block;
+	#endif
+	
 	__be32 create_date;
 	__be32 modify_date;
 	__be32 backup_date;
@@ -333,5 +341,51 @@ typedef union {
 	struct hfsplus_cat_key cat;
 	struct hfsplus_ext_key ext;
 } __packed hfsplus_btree_key;
+
+#ifdef CONFIG_HFSPLUS_JOURNAL
+struct hfsplus_journal_info_block {
+  __be32 flags;
+  __be32 device_signature[8];
+  __be64 offset;
+  __be64 size;
+  u32 reserved[32];
+} __packed;
+
+/* Possible values of flags */
+#define HFSPLUS_JOURNAL_IN_FS		0x01
+#define HFSPLUS_JOURNAL_ON_OTHER_DEVICE	0x02
+#define HFSPLUS_JOURNAL_NEED_INIT	0x04
+
+struct hfsplus_journal_header {
+  __be32 magic;
+  __be32 endian;
+  __be64 start;
+  __be64 end;
+  __be64 size; /* This includes the journal header and the journal buffer */
+  __be32 blhdr_size;
+  __be32 checksum;
+  __be32 jhdr_size;
+} __packed;
+
+/* Valid magic and endian value */
+#define HFSPLUS_JOURNAL_HEADER_MAGIC	0x4A4E4C78
+#define HFSPLUS_JOURNAL_HEADER_ENDIAN	0x12345678
+
+struct hfsplus_block_info {
+  __be64 bnum;
+  __be32 bsize;
+  __be32 next;
+} __packed;
+
+struct hfsplus_block_list_header {
+  __be16 max_blocks;
+  __be16 num_blocks;
+  __be32 bytes_used;
+  __be32 checksum;
+  __be32 pad;
+  struct hfsplus_block_info binfo[1];
+} __packed;
+
+#endif /* CONFIG_HFSPLUS_JOURNAL */
 
 #endif
