@@ -1,0 +1,20 @@
+Source: hfsplus-dkms
+Section: unknown
+Priority: optional
+Maintainer: Michael Reeves <michael@unknown>
+Build-Depends: debhelper (>= 7)
+Standards-Version: 3.9.2
+
+Package: hfsplus-dkms-modules-_KVERS_
+Architecture: any
+Provides: hfsplus-dkms-modules
+Description: hfsplus-dkms modules for Linux (kernel _KVERS_).
+ This package contains the set of loadable kernel modules for the
+ <description>.
+ .
+ This package contains the compiled kernel modules for _KVERS_
+ .
+ If you have compiled your own kernel, you will most likely need to build
+ your own hfsplus-dkms-modules. The hfsplus-dkms-source package has been
+ provided for use with the Debian's module-assistant or kernel-package
+ utilities to produce a version of hfsplus-dkms-modules for your kernel.
