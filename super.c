@@ -28,20 +28,10 @@ static int hfsplus_system_read_inode(struct inode *inode)
 	switch (inode->i_ino) {
 	case HFSPLUS_EXT_CNID:
 		hfsplus_inode_read_fork(inode, &vhdr->ext_file);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-		if (vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_JOURNALED)) {
-			inode->i_mapping->a_ops = &hfsplus_journaled_btree_aops;
-		} else
-#endif
 		inode->i_mapping->a_ops = &hfsplus_btree_aops;
 		break;
 	case HFSPLUS_CAT_CNID:
 		hfsplus_inode_read_fork(inode, &vhdr->cat_file);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-		if (vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_JOURNALED)) {
-			inode->i_mapping->a_ops = &hfsplus_journaled_btree_aops;
-		} else
-#endif
 		inode->i_mapping->a_ops = &hfsplus_btree_aops;
 		break;
 	case HFSPLUS_ALLOC_CNID:
@@ -53,11 +43,6 @@ static int hfsplus_system_read_inode(struct inode *inode)
 		break;
 	case HFSPLUS_ATTR_CNID:
 		hfsplus_inode_read_fork(inode, &vhdr->attr_file);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-		if (vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_JOURNALED)) {
-			inode->i_mapping->a_ops = &hfsplus_journaled_btree_aops;
-		} else
-#endif
 		inode->i_mapping->a_ops = &hfsplus_btree_aops;
 		break;
 	default:
@@ -218,17 +203,17 @@ int hfsplus_sync_fs(struct super_block *sb, int wait)
 		write_backup = 1;
 	}
 
-	error2 = hfsplus_submit_bio(sb->s_bdev,
+	error2 = hfsplus_submit_bio(sb,
 				   sbi->part_start + HFSPLUS_VOLHEAD_SECTOR,
-				   sbi->s_vhdr, WRITE_SYNC);
+				   sbi->s_vhdr_buf, NULL, WRITE_SYNC);
 	if (!error)
 		error = error2;
 	if (!write_backup)
 		goto out;
 
-	error2 = hfsplus_submit_bio(sb->s_bdev,
+	error2 = hfsplus_submit_bio(sb,
 				  sbi->part_start + sbi->sect_count - 2,
-				  sbi->s_backup_vhdr, WRITE_SYNC);
+				  sbi->s_backup_vhdr_buf, NULL, WRITE_SYNC);
 	if (!error)
 		error2 = error;
 out:
@@ -252,9 +237,6 @@ static void hfsplus_write_super(struct super_block *sb)
 static void hfsplus_put_super(struct super_block *sb)
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(sb);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-	int jnl_ret;
-#endif
 
 	dprint(DBG_SUPER, "hfsplus_put_super\n");
 
@@ -268,25 +250,19 @@ static void hfsplus_put_super(struct super_block *sb)
 		vhdr->attributes |= cpu_to_be32(HFSPLUS_VOL_UNMNT);
 		vhdr->attributes &= cpu_to_be32(~HFSPLUS_VOL_INCNSTNT);
 
-#ifdef CONFIG_HFSPLUS_JOURNAL
-		jnl_ret = hfsplus_journaled_start_transaction(NULL, sb);
-#endif
 		hfsplus_sync_fs(sb, 1);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-		if (jnl_ret == HFSPLUS_JOURNAL_SUCCESS)
-			hfsplus_journaled_end_transaction(NULL, sb);
-#endif
 	}
 
 	hfs_btree_close(sbi->cat_tree);
 	hfs_btree_close(sbi->ext_tree);
 	iput(sbi->alloc_file);
 	iput(sbi->hidden_dir);
-#ifdef CONFIG_HFSPLUS_JOURNAL
+	#ifdef CONFIG_HFSPLUS_JOURNAL
 	hfsplus_journaled_deinit(sb);
-#endif
-	kfree(sbi->s_vhdr);
-	kfree(sbi->s_backup_vhdr);
+	#endif
+	
+	kfree(sbi->s_vhdr_buf);
+	kfree(sbi->s_backup_vhdr_buf);
 	unload_nls(sbi->nls);
 	kfree(sb->s_fs_info);
 	sb->s_fs_info = NULL;
@@ -324,17 +300,12 @@ static int hfsplus_remount(struct super_block *sb, int *flags, char *data)
 			return -EINVAL;
 
 		if (!(vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_UNMNT))) {
-#ifndef CONFIG_HFSPLUS_JOURNAL
 			printk(KERN_WARNING "hfs: filesystem was "
 					"not cleanly unmounted, "
 					"running fsck.hfsplus is recommended.  "
 					"leaving read-only.\n");
 			sb->s_flags |= MS_RDONLY;
 			*flags |= MS_RDONLY;
-#else
-			printk("HFS+-fs warning: Filesystem was not cleanly unmounted, "
-					"running fsck.hfsplus is recommended.\n");
-#endif
 		} else if (force) {
 			/* nothing */
 		} else if (vhdr->attributes &
@@ -357,8 +328,9 @@ static int hfsplus_remount(struct super_block *sb, int *flags, char *data)
                                sb->s_flags |= MS_RDONLY;
                                *flags |= MS_RDONLY;
                        } else
-                               printk("HFS+-fs: Able to mount journaled hfsplus volume in read-write mode\n");
+                               printk("HFS+-fs: Able to mount journaled hfsplus volume in read-write mode. Journaling is temporarily switched off.\n");
 #endif
+
 		}
 	}
 	return 0;
@@ -386,6 +358,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 	struct inode *root, *inode;
 	struct qstr str;
 	struct nls_table *nls = NULL;
+	u64 last_fs_block, last_fs_page;
 	int err;
 #ifdef CONFIG_HFSPLUS_JOURNAL
 	int jnl_ret;
@@ -459,29 +432,28 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		be32_to_cpu(vhdr->rsrc_clump_sz) >> sbi->alloc_blksz_shift;
 	if (!sbi->rsrc_clump_blocks)
 		sbi->rsrc_clump_blocks = 1;
-	
-	err = generic_check_addressable(sbi->alloc_blksz_shift,
-					sbi->total_blocks);
-	if (err) {
+
+	err = -EFBIG;
+	last_fs_block = sbi->total_blocks - 1;
+	last_fs_page = (last_fs_block << sbi->alloc_blksz_shift) >>
+			PAGE_CACHE_SHIFT;
+
+	if ((last_fs_block > (sector_t)(~0ULL) >> (sbi->alloc_blksz_shift - 9)) ||
+	    (last_fs_page > (pgoff_t)(~0ULL))) {
 		printk(KERN_ERR "hfs: filesystem size too large.\n");
 		goto out_free_vhdr;
 	}
-	
+
 	/* Set up operations so we can load metadata */
 	sb->s_op = &hfsplus_sops;
 	sb->s_maxbytes = MAX_LFS_FILESIZE;
 
 	if (!(vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_UNMNT))) {
-#ifndef CONFIG_HFSPLUS_JOURNAL
 		printk(KERN_WARNING "hfs: Filesystem was "
 				"not cleanly unmounted, "
 				"running fsck.hfsplus is recommended.  "
 				"mounting read-only.\n");
 		sb->s_flags |= MS_RDONLY;
-#else
-		printk("HFS+-fs warning: Filesystem was not cleanly unmounted, "
-				"running fsck.hfsplus is recommended.\n");
-#endif
 	} else if (test_and_clear_bit(HFSPLUS_SB_FORCE, &sbi->flags)) {
 		/* nothing */
 	} else if (vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_SOFTLOCK)) {
@@ -563,14 +535,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		be32_add_cpu(&vhdr->write_count, 1);
 		vhdr->attributes &= cpu_to_be32(~HFSPLUS_VOL_UNMNT);
 		vhdr->attributes |= cpu_to_be32(HFSPLUS_VOL_INCNSTNT);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-	jnl_ret = hfsplus_journaled_start_transaction(NULL, sb);
-#endif
 		hfsplus_sync_fs(sb, 1);
-#ifdef CONFIG_HFSPLUS_JOURNAL
-	if (jnl_ret == HFSPLUS_JOURNAL_SUCCESS)
-		hfsplus_journaled_end_transaction(NULL, sb);
-#endif
 
 		if (!sbi->hidden_dir) {
 			mutex_lock(&sbi->vh_mutex);
@@ -606,8 +571,8 @@ out_close_cat_tree:
 out_close_ext_tree:
 	hfs_btree_close(sbi->ext_tree);
 out_free_vhdr:
-	kfree(sbi->s_vhdr);
-	kfree(sbi->s_backup_vhdr);
+	kfree(sbi->s_vhdr_buf);
+	kfree(sbi->s_backup_vhdr_buf);
 out_unload_nls:
 	unload_nls(sbi->nls);
 	unload_nls(nls);
