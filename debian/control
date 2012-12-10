@@ -12,7 +12,7 @@ Package: hfsplus-dkms
 Architecture: linux-any
 Depends: ${misc:Depends}, dkms, linux-headers-686-pae (>=3.2.0) | linux-headers-amd64 (>=3.2.0) | linux-headers-generic (>=3.2.0) | linux-headers (>=3.2.0)
 Provides: hfsplus-modules
-Description: Expermental dkms module to support HFS+.
+Description: Expermental dkms module to support journaled HFS+.
  This package contains the modified source for the hfsplus kernel module,
  packaged with approriate configuration for DKMS to build new
  module dynamically. This module includes experimental support for journaling.
