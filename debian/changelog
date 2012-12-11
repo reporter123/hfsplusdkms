@@ -1,5 +1,5 @@
-hfsplus-dkms (1.0-ppa1) stable; urgency=low
-  * Initial release.
-  * Automatically packaged by DKMS.
+hfsplus-dkms (1.0-1) precise; urgency=low
 
- -- Michael Reeves <reeves.87@gmail.com>  Mon, 10 Dec 2012 21:26:06 -0500
+  * Initial release of dkms package
+
+ -- Michael Reeves <reeves.87@gmail.com>  Mon, 16 Apr 2012 16:03:01 -0400

@@ -1,0 +1,8 @@
+PACKAGE_NAME="hfsplus"
+PACKAGE_VERSION=#MODULE_VERSION#
+CLEAN="make clean"
+
+BUILT_MODULE_NAME[0]="hfsplus"
+MAKE[0]="make"
+DEST_MODULE_LOCATION[0]="/kernel/updates"
+AUTOINSTALL="yes"
