@@ -2,5 +2,4 @@ hfsplus-dkms (1.0-ppa1) stable; urgency=low
   * Initial release.
   * Automatically packaged by DKMS.
 
- -- Dynamic Kernel Modules Support Team <pkg-dkms-maint@lists.alioth.debian.org>  Mon, 10 Dec 2012 21:26:06 -0500
-
+ -- Michael Reeves <reeves.87@gmail.com>  Mon, 10 Dec 2012 21:26:06 -0500

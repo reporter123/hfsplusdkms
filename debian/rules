@@ -6,7 +6,7 @@
 
 DEB_NAME=hfsplus
 NAME=hfsplus
-VERSION=dkms
+VERSION=1.0-ppa1
 
 configure: configure-stamp
 configure-stamp:
@@ -33,7 +33,7 @@ install: build
 	dh_testroot
 	dh_prep
 	dh_installdirs
-	$(MAKE) DESTDIR=$(CURDIR)/debian/$(DEB_NAME)-dkms NAME=$(NAME) VERSION=$(VERSION) install
+	dh_dkms
 
 binary-arch: build install
 
