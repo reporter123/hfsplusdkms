@@ -1,5 +1,6 @@
-hfsplus-dkms (1.0-1) unstable; urgency=low
+hfsplus-dkms (1.0-ppa1) stable; urgency=low
+  * Initial release.
+  * Automatically packaged by DKMS.
 
-  * Initial release (Closes: #nnnn)  <nnnn is the bug number of your ITP>
+ -- Dynamic Kernel Modules Support Team <pkg-dkms-maint@lists.alioth.debian.org>  Mon, 10 Dec 2012 21:26:06 -0500
 
- -- Michael Reeves <michael@unknown>  Mon, 10 Dec 2012 18:04:21 -0500
