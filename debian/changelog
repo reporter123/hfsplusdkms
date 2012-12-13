@@ -1,3 +1,6 @@
+hfsplus-dkms (1.0-0-ppa2) precise; urgency=low
+  * fix broken install package missing *.h
+
 hfsplus-dkms (1.0-1) precise; urgency=low
 
   * Initial release of dkms package

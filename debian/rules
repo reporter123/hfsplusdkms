@@ -29,7 +29,9 @@ override_dh_auto_install:
 	install -d                                        $(DESTDIR)
 	install -m 644 -D $(CURDIR)/Makefile              $(DESTDIR)/
 	install -m 644 -D $(CURDIR)/*.c                   $(DESTDIR)/
-
+	install -m 644 -D $(CURDIR)/*.h                   $(DESTDIR)/
+	install -m 644 -D $(CURDIR)/dkms.conf             $(DESTDIR)/
+	install -m 644 -D $(CURDIR)/Kconfig               $(DESTDIR)/
 override_dh_dkms:
 	dh_dkms -V
 
