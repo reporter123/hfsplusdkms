@@ -1,4 +1,4 @@
-hfsplus-dkms (1.0-ppa1) precise; urgency=low
+hfsplus-dkms (1.0ppa1) precise; urgency=low
 
   * Initial release of dkms package
 
