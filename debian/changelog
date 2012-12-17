@@ -1,3 +1,11 @@
+hfsplus-dkms (1.0ppa2) precise; urgency=low
+
+  * really activate journaling.
+  * fix a build error on older 3.x kernel headers
+  * attempt to support kernel 3.0 or later.
+
+ -- Michael Reeves <reeves.87@gmail.com>  Mon, 13 Dec 2012 16:25:01 -0400
+
 hfsplus-dkms (1.0ppa1) precise; urgency=low
 
   * Initial release of dkms package

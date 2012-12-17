@@ -7,7 +7,7 @@
  *
  * Inode handling routines
  */
-
+#include <linux/version.h>
 #include <linux/blkdev.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
@@ -112,6 +112,30 @@ static int hfsplus_releasepage(struct page *page, gfp_t mask)
 	return res ? try_to_free_buffers(page) : 0;
 }
 
+#ifdef CONFIG_HFSPLUS_JOURNAL
+static int hfsplus_journaled_writepage(struct page *page, struct writeback_control *wbc)
+{
+	int jnl_ret, ret = 0;
+	struct inode * const inode = page->mapping->host;
+	loff_t i_size = i_size_read(inode);
+	const pgoff_t end_index = i_size >> PAGE_CACHE_SHIFT;
+
+   /* Is the page fully inside i_size? */
+   if (page->index < end_index) {
+		jnl_ret = hfsplus_journaled_start_transaction(page, NULL);
+
+		ret = block_write_full_page(page, hfsplus_get_block, wbc);
+
+		if (jnl_ret == HFSPLUS_JOURNAL_SUCCESS && !ret)
+			hfsplus_journaled_end_transaction(page, NULL);
+	}
+	else
+		ret = block_write_full_page(page, hfsplus_get_block, wbc);
+
+	return ret;
+}
+#endif
+
 static ssize_t hfsplus_direct_IO(int rw, struct kiocb *iocb,
 		const struct iovec *iov, loff_t offset, unsigned long nr_segs)
 {
@@ -119,8 +143,13 @@ static ssize_t hfsplus_direct_IO(int rw, struct kiocb *iocb,
 	struct inode *inode = file->f_path.dentry->d_inode->i_mapping->host;
 	ssize_t ret;
 
+//#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,2,30)
+//	ret = blockdev_direct_IO(rw, iocb, inode, inode->i_sb->s_bdev, iov,
+//							 offset, nr_segs, hfsplus_get_block, NULL);
+//#else
 	ret = blockdev_direct_IO(rw, iocb, inode, iov, offset, nr_segs,
 				 hfsplus_get_block);
+//#endif
 
 	/*
 	 * In case of error extending write may have instantiated a few
@@ -140,8 +169,32 @@ static ssize_t hfsplus_direct_IO(int rw, struct kiocb *iocb,
 static int hfsplus_writepages(struct address_space *mapping,
 			      struct writeback_control *wbc)
 {
+#ifdef CONFIG_HFSPLUS_JOURNAL
+	struct inode * const inode = mapping->host;
+	int ret;
+	u32 block_num = be32_to_cpu(HFSPLUS_I(inode)->first_extents[0].start_block);
+
+	if (block_num == 1)
+		return mpage_writepages(mapping, wbc, NULL);
+	else
+		return mpage_writepages(mapping, wbc, hfsplus_get_block);
+
+	return ret;
+#else
 	return mpage_writepages(mapping, wbc, hfsplus_get_block);
+#endif
 }
+
+#ifdef CONFIG_HFSPLUS_JOURNAL
+struct address_space_operations hfsplus_journaled_btree_aops = {
+	.readpage	= hfsplus_readpage,
+	.writepage	= hfsplus_journaled_writepage,
+	.write_begin	= hfsplus_write_begin,
+	.write_end	= generic_write_end,
+	.bmap		= hfsplus_bmap,
+	.releasepage	= hfsplus_releasepage,
+};
+#endif
 
 const struct address_space_operations hfsplus_btree_aops = {
 	.readpage	= hfsplus_readpage,

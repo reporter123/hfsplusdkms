@@ -26,6 +26,8 @@ override_dh_auto_test:
 override_dh_auto_clean:
 
 override_dh_auto_install:
+	dh_auto_build
+	dh_auto_clean
 	install -d                                        $(DESTDIR)
 	install -m 644 -D $(CURDIR)/Makefile              $(DESTDIR)/
 	install -m 644 -D $(CURDIR)/*.c                   $(DESTDIR)/

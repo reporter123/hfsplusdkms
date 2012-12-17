@@ -182,9 +182,7 @@ struct hfsplus_vh;
 struct hfs_btree;
 
 struct hfsplus_sb_info {
-	void *s_vhdr_buf;
 	struct hfsplus_vh *s_vhdr;
-	void *s_backup_vhdr_buf;
 	struct hfsplus_vh *s_backup_vhdr;
 	struct hfs_btree *ext_tree;
 	struct hfs_btree *cat_tree;
@@ -335,15 +333,6 @@ struct hfsplus_readdir_data {
 	struct hfsplus_cat_key key;
 };
 
-/*
- * Find minimum acceptible I/O size for an hfsplus sb.
- */
-static inline unsigned short hfsplus_min_io_size(struct super_block *sb)
-{
-	return max_t(unsigned short, bdev_logical_block_size(sb->s_bdev),
-		     HFSPLUS_SECTOR_SIZE);
-}
-
 #define hfs_btree_open hfsplus_btree_open
 #define hfs_btree_close hfsplus_btree_close
 #define hfs_btree_write hfsplus_btree_write
@@ -471,6 +460,9 @@ void hfsplus_file_truncate(struct inode *);
 extern const struct address_space_operations hfsplus_aops;
 extern const struct address_space_operations hfsplus_btree_aops;
 extern const struct dentry_operations hfsplus_dentry_operations;
+#ifdef CONFIG_HFSPLUS_JOURNAL
+extern struct address_space_operations hfsplus_journaled_btree_aops;
+#endif
 
 void hfsplus_inode_read_fork(struct inode *, struct hfsplus_fork_raw *);
 void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
@@ -523,8 +515,9 @@ int hfsplus_compare_dentry(const struct dentry *parent,
 /* wrapper.c */
 int hfsplus_read_wrapper(struct super_block *);
 int hfs_part_find(struct super_block *, sector_t *, sector_t *);
-int hfsplus_submit_bio(struct super_block *sb, sector_t sector,
-		void *buf, void **data, int rw);
+int hfsplus_submit_bio(struct block_device *bdev, sector_t sector,
+		void *data, int rw);
+
 #ifdef CONFIG_HFSPLUS_JOURNAL
 /* journal.c */
 void hfsplus_journaled_init(struct super_block *, struct hfsplus_vh *);
