@@ -205,11 +205,17 @@ done:
 
 	return 1;
 }
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+int hfsplus_show_options(struct seq_file *seq, struct dentry *root)
+#else
 int hfsplus_show_options(struct seq_file *seq, struct vfsmount *mnt)
+#endif
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+	struct hfsplus_sb_info *sbi = HFSPLUS_SB(root->d_sb);
+#else
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(mnt->mnt_sb);
-
+#endif
 	if (sbi->creator != HFSPLUS_DEF_CR_TYPE)
 		seq_printf(seq, ",creator=%.4s", (char *)&sbi->creator);
 	if (sbi->type != HFSPLUS_DEF_CR_TYPE)

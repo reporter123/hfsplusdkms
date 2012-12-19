@@ -1,18 +1,25 @@
 #
 ## Makefile for the linux hfsplus filesystem routines.
 #
+KERNELRELEASE ?= $(shell uname -r)
+KDIR ?= /lib/modules/$(KERNELRELEASE)/build
+#KDIR  ?= /lib/modules/3.2.0-34-generic/build
 
 obj-$(CONFIG_HFSPLUS_FS) += hfsplus.o
 
 hfsplus-objs := super.o options.o inode.o ioctl.o extents.o catalog.o dir.o btree.o \
 		bnode.o brec.o bfind.o tables.o unicode.o wrapper.o bitmap.o part_tbl.o journal.o
 
+default: modules
 
-all:
-	make -C /lib/modules/`uname -r`/build M=`pwd`
-	
+modules:
+	$(MAKE) -C  $(KDIR) M=`pwd` $@
+
+modules_prepare:
+	$(MAKE) O=$(KDIR) M=$(PWD) $@
+
 clean:
-	make -C /lib/modules/`uname -r`/build M=`pwd` clean
+	$(MAKE) -C $(KDIR) M=$(PWD) $@
 
 
 

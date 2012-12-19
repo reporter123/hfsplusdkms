@@ -150,6 +150,11 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		filp->f_pos++;
 		/* fall through */
 	case 1:
+		if (fd.entrylength > sizeof(entry) || fd.entrylength < 0) {
+			err = -EIO;
+			goto out;
+		}
+		
 		hfs_bnode_read(fd.bnode, &entry, fd.entryoffset,
 			fd.entrylength);
 		if (be16_to_cpu(entry.type) != HFSPLUS_FOLDER_THREAD) {
@@ -181,6 +186,12 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			err = -EIO;
 			goto out;
 		}
+
+		if (fd.entrylength > sizeof(entry) || fd.entrylength < 0) {
+			err = -EIO;
+			goto out;
+		}
+		
 		hfs_bnode_read(fd.bnode, &entry, fd.entryoffset,
 			fd.entrylength);
 		type = be16_to_cpu(entry.type);
@@ -422,9 +433,14 @@ out:
 	mutex_unlock(&sbi->vh_mutex);
 	return res;
 }
-
+//abi change at least 3.5+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+static int hfsplus_mknod(struct inode *dir, struct dentry *dentry,
+			 umode_t mode, dev_t rdev)
+#else
 static int hfsplus_mknod(struct inode *dir, struct dentry *dentry,
 			 int mode, dev_t rdev)
+#endif
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(dir->i_sb);
 	struct inode *inode;
@@ -453,13 +469,22 @@ out:
 	return res;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+static int hfsplus_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+			  struct nameidata *nd)
+#else
 static int hfsplus_create(struct inode *dir, struct dentry *dentry, int mode,
 			  struct nameidata *nd)
+#endif
 {
 	return hfsplus_mknod(dir, dentry, mode, 0);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+static int hfsplus_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
+#else
 static int hfsplus_mkdir(struct inode *dir, struct dentry *dentry, int mode)
+#endif
 {
 	return hfsplus_mknod(dir, dentry, mode | S_IFDIR, 0);
 }

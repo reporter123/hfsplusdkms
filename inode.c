@@ -7,7 +7,6 @@
  *
  * Inode handling routines
  */
-#include <linux/version.h>
 #include <linux/blkdev.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
@@ -143,13 +142,13 @@ static ssize_t hfsplus_direct_IO(int rw, struct kiocb *iocb,
 	struct inode *inode = file->f_path.dentry->d_inode->i_mapping->host;
 	ssize_t ret;
 
-//#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,2,30)
-//	ret = blockdev_direct_IO(rw, iocb, inode, inode->i_sb->s_bdev, iov,
-//							 offset, nr_segs, hfsplus_get_block, NULL);
-//#else
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,2,30)
+	ret = blockdev_direct_IO(rw, iocb, inode, inode->i_sb->s_bdev, iov,
+							 offset, nr_segs, hfsplus_get_block, NULL);
+#else
 	ret = blockdev_direct_IO(rw, iocb, inode, iov, offset, nr_segs,
 				 hfsplus_get_block);
-//#endif
+#endif
 
 	/*
 	 * In case of error extending write may have instantiated a few
@@ -246,6 +245,7 @@ static struct dentry *hfsplus_file_lookup(struct inode *dir,
 	mutex_init(&hip->extents_lock);
 	hip->extent_state = 0;
 	hip->flags = 0;
+	hip->userflags = 0;
 	set_bit(HFSPLUS_I_RSRC, &hip->flags);
 
 	err = hfs_find_init(HFSPLUS_SB(sb)->cat_tree, &fd);
@@ -430,8 +430,11 @@ static const struct file_operations hfsplus_file_operations = {
 	.release	= hfsplus_file_release,
 	.unlocked_ioctl = hfsplus_ioctl,
 };
-
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+struct inode *hfsplus_new_inode(struct super_block *sb, umode_t mode)
+#else
 struct inode *hfsplus_new_inode(struct super_block *sb, int mode)
+#endif
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(sb);
 	struct inode *inode = new_inode(sb);
@@ -453,6 +456,7 @@ struct inode *hfsplus_new_inode(struct super_block *sb, int mode)
 	atomic_set(&hip->opencnt, 0);
 	hip->extent_state = 0;
 	hip->flags = 0;
+	hip->userflags = 0;
 	memset(hip->first_extents, 0, sizeof(hfsplus_extent_rec));
 	memset(hip->cached_extents, 0, sizeof(hfsplus_extent_rec));
 	hip->alloc_blocks = 0;

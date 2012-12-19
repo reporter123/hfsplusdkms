@@ -11,11 +11,11 @@
 
 # Get package version info.
 SOURCE_VERSION := $(shell head -1 debian/changelog | cut -d\( -f2 | cut -d\) -f1)
-UPSTREAM_VERSION := $(shell echo "$(SOURCE_VERSION)" | cut -d- -f1)
+VERSION := $(shell echo "$(SOURCE_VERSION)" | cut -d- -f1)
 
 # Installation directories
 PKGDIR := $(CURDIR)/debian/hfsplus-dkms
-DESTDIR := $(PKGDIR)/usr/src/hfsplus-$(UPSTREAM_VERSION)
+DESTDIR := $(PKGDIR)/usr/src/hfsplus-$(VERSION)
 
 override_dh_auto_configure:
 
@@ -26,8 +26,6 @@ override_dh_auto_test:
 override_dh_auto_clean:
 
 override_dh_auto_install:
-	dh_auto_build
-	dh_auto_clean
 	install -d                                        $(DESTDIR)
 	install -m 644 -D $(CURDIR)/Makefile              $(DESTDIR)/
 	install -m 644 -D $(CURDIR)/*.c                   $(DESTDIR)/

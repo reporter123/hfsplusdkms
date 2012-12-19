@@ -14,6 +14,8 @@
 #include <linux/mutex.h>
 #include <linux/buffer_head.h>
 #include <linux/blkdev.h>
+#include <linux/version.h>
+
 #include "hfsplus_raw.h"
 
 #define DBG_BNODE_REFS	0x00000001
@@ -378,6 +380,10 @@ struct hfsplus_readdir_data {
 #define HFSPLUS_IOC_EXT2_GETFLAGS	FS_IOC_GETFLAGS
 #define HFSPLUS_IOC_EXT2_SETFLAGS	FS_IOC_SETFLAGS
 
+/*
+ * hfs+-specific ioctl for making the filesystem bootable
+ */
+#define HFSPLUS_IOC_BLESS _IO('h', 0x80)
 
 /*
  * Functions in any *.c used in other files
@@ -468,7 +474,12 @@ void hfsplus_inode_read_fork(struct inode *, struct hfsplus_fork_raw *);
 void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
 int hfsplus_cat_read_inode(struct inode *, struct hfs_find_data *);
 int hfsplus_cat_write_inode(struct inode *);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+struct inode *hfsplus_new_inode(struct super_block *, umode_t);
+#else
 struct inode *hfsplus_new_inode(struct super_block *, int);
+#endif
+
 void hfsplus_delete_inode(struct inode *);
 int hfsplus_file_fsync(struct file *file, loff_t start, loff_t end,
 		       int datasync);
@@ -485,8 +496,11 @@ ssize_t hfsplus_listxattr(struct dentry *dentry, char *buffer, size_t size);
 int hfsplus_parse_options(char *, struct hfsplus_sb_info *);
 int hfsplus_parse_options_remount(char *input, int *force);
 void hfsplus_fill_defaults(struct hfsplus_sb_info *);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+int hfsplus_show_options(struct seq_file *, struct dentry *);
+#else
 int hfsplus_show_options(struct seq_file *, struct vfsmount *);
-
+#endif
 /* super.c */
 struct inode *hfsplus_iget(struct super_block *, unsigned long);
 int hfsplus_sync_fs(struct super_block *sb, int wait);
@@ -540,5 +554,9 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_mt2ut(t)		(struct timespec){ .tv_sec = __hfsp_mt2ut(t) }
 #define hfsp_ut2mt(t)		__hfsp_ut2mt((t).tv_sec)
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
+#define set_nlink(node,i) node = i
+#endif
 
 #endif

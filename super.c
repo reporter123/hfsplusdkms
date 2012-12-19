@@ -169,7 +169,11 @@ static void hfsplus_evict_inode(struct inode *inode)
 {
 	dprint(DBG_INODE, "hfsplus_evict_inode: %lu\n", inode->i_ino);
 	truncate_inode_pages(&inode->i_data, 0);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+	clear_inode(inode);
+#else
 	end_writeback(inode);
+#endif
 	if (HFSPLUS_IS_RSRC(inode)) {
 		HFSPLUS_I(HFSPLUS_I(inode)->rsrc_inode)->rsrc_inode = NULL;
 		iput(HFSPLUS_I(inode)->rsrc_inode);
@@ -527,6 +531,17 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		err = PTR_ERR(root);
 		goto out_put_alloc_file;
 	}
+	
+	sb->s_d_op = &hfsplus_dentry_operations;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
+	sb->s_root = d_make_root(root);
+#else
+	sb->s_root = d_alloc_root(root);
+#endif
+	if (!sb->s_root) {
+		err = -ENOMEM;
+		goto out_put_hidden_dir;
+	}
 
 	str.len = sizeof(HFSP_HIDDENDIR_NAME) - 1;
 	str.name = HFSP_HIDDENDIR_NAME;
@@ -564,7 +579,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		vhdr->attributes &= cpu_to_be32(~HFSPLUS_VOL_UNMNT);
 		vhdr->attributes |= cpu_to_be32(HFSPLUS_VOL_INCNSTNT);
 #ifdef CONFIG_HFSPLUS_JOURNAL
-	jnl_ret = hfsplus_journaled_start_transaction(NULL, sb);
+		jnl_ret = hfsplus_journaled_start_transaction(NULL, sb);
 #endif
 		hfsplus_sync_fs(sb, 1);
 #ifdef CONFIG_HFSPLUS_JOURNAL
@@ -575,20 +590,21 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		if (!sbi->hidden_dir) {
 			mutex_lock(&sbi->vh_mutex);
 			sbi->hidden_dir = hfsplus_new_inode(sb, S_IFDIR);
-			hfsplus_create_cat(sbi->hidden_dir->i_ino, root, &str,
+			if (!sbi->hidden_dir) {
+				mutex_unlock(&sbi->vh_mutex);
+				err = -ENOMEM;
+				goto out_put_root;
+			}
+			
+			err = hfsplus_create_cat(sbi->hidden_dir->i_ino, root, &str,
 					   sbi->hidden_dir);
 			mutex_unlock(&sbi->vh_mutex);
-
+			if (err)
+				goto out_put_hidden_dir;
+			
 			hfsplus_mark_inode_dirty(sbi->hidden_dir,
 						 HFSPLUS_I_CAT_DIRTY);
 		}
-	}
-
-	sb->s_d_op = &hfsplus_dentry_operations;
-	sb->s_root = d_alloc_root(root);
-	if (!sb->s_root) {
-		err = -ENOMEM;
-		goto out_put_hidden_dir;
 	}
 
 	unload_nls(sbi->nls);
@@ -598,7 +614,8 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 out_put_hidden_dir:
 	iput(sbi->hidden_dir);
 out_put_root:
-	iput(root);
+	dput(sb->s_root);
+	sb->s_root = NULL;
 out_put_alloc_file:
 	iput(sbi->alloc_file);
 out_close_cat_tree:
@@ -633,8 +650,9 @@ static struct inode *hfsplus_alloc_inode(struct super_block *sb)
 static void hfsplus_i_callback(struct rcu_head *head)
 {
 	struct inode *inode = container_of(head, struct inode, i_rcu);
-
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,5,0)
 	INIT_LIST_HEAD(&inode->i_dentry);
+#endif
 	kmem_cache_free(hfsplus_inode_cachep, HFSPLUS_I(inode));
 }
 
