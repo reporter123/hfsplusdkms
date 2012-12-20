@@ -2,15 +2,13 @@ Source: hfsplus-dkms
 Section: misc
 Priority: optional
 Maintainer: Michael Reeves <reeves.87@gmail.com>
-Build-Depends: debhelper (>= 7.0.50), dkms [linux-any], linux-headers-686-pae (>=3.2.0) | linux-headers-amd64 (>=3.2.0) | linux-headers-generic (>=3.2.0) | linux-headers (>=3.2.0)
+Build-Depends: debhelper (>= 7.0.50), dkms [linux-any], linux-headers-686-pae (>=3.0.0) | linux-headers-amd64 (>=3.0.0) | linux-headers-generic (>=3.0.0) | linux-headers (>=3.0.0)
 Standards-Version: 3.9.3
 Homepage: 
-#Vcs-Git: git://git.debian.org/collab-maint/hfsplus-dkms.git
-#Vcs-Browser: http://git.debian.org/?p=collab-maint/hfsplus-dkms.git;a=summary
 
 Package: hfsplus-dkms
 Architecture: linux-any
-Depends: ${misc:Depends}, dkms, linux-headers-686-pae (>=3.2.0) | linux-headers-amd64 (>=3.2.0) | linux-headers-generic (>=3.2.0) | linux-headers (>=3.2.0)
+Depends: ${misc:Depends}, dkms, linux-headers-686-pae (>=3.0.0) | linux-headers-amd64 (>=3.0.0) | linux-headers-generic (>=3.0.0) | linux-headers (>=3.0.0)
 Provides: hfsplus-modules
 Description: Expermental dkms module to support journaled HFS+.
  This package contains the modified source for the hfsplus kernel module,
