@@ -139,7 +139,7 @@ static int hfsplus_system_write_inode(struct inode *inode)
 
 	if (fork->total_size != cpu_to_be64(inode->i_size)) {
 		set_bit(HFSPLUS_SB_WRITEBACKUP, &sbi->flags);
-		inode->i_sb->s_dirt = 1;
+		hfsplus_mark_mdb_dirty(inode->i_sb);
 	}
 	hfsplus_inode_write_fork(inode, fork);
 	if (tree)
@@ -180,7 +180,7 @@ static void hfsplus_evict_inode(struct inode *inode)
 	}
 }
 
-int hfsplus_sync_fs(struct super_block *sb, int wait)
+static int hfsplus_sync_fs(struct super_block *sb, int wait)
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(sb);
 	struct hfsplus_vh *vhdr = sbi->s_vhdr;
@@ -190,9 +190,7 @@ int hfsplus_sync_fs(struct super_block *sb, int wait)
 	if (!wait)
 		return 0;
 
-	dprint(DBG_SUPER, "hfsplus_write_super\n");
-
-	sb->s_dirt = 0;
+	dprint(DBG_SUPER, "hfsplus_sync_fs\n");
 
 	/*
 	 * Explicitly write out the special metadata inodes.
@@ -222,17 +220,17 @@ int hfsplus_sync_fs(struct super_block *sb, int wait)
 		write_backup = 1;
 	}
 
-	error2 = hfsplus_submit_bio(sb->s_bdev,
+	error2 = hfsplus_submit_bio(sb,
 				   sbi->part_start + HFSPLUS_VOLHEAD_SECTOR,
-				   sbi->s_vhdr, WRITE_SYNC);
+				   sbi->s_vhdr_buf, NULL, WRITE_SYNC);
 	if (!error)
 		error = error2;
 	if (!write_backup)
 		goto out;
 
-	error2 = hfsplus_submit_bio(sb->s_bdev,
+	error2 = hfsplus_submit_bio(sb,
 				  sbi->part_start + sbi->sect_count - 2,
-				  sbi->s_backup_vhdr, WRITE_SYNC);
+				  sbi->s_backup_vhdr_buf, NULL, WRITE_SYNC);
 	if (!error)
 		error2 = error;
 out:
@@ -245,12 +243,34 @@ out:
 	return error;
 }
 
-static void hfsplus_write_super(struct super_block *sb)
+static void delayed_sync_fs(struct work_struct *work)
 {
-	if (!(sb->s_flags & MS_RDONLY))
-		hfsplus_sync_fs(sb, 1);
-	else
-		sb->s_dirt = 0;
+	struct hfsplus_sb_info *sbi;
+
+	sbi = container_of(work, struct hfsplus_sb_info, sync_work.work);
+
+	spin_lock(&sbi->work_lock);
+	sbi->work_queued = 0;
+	spin_unlock(&sbi->work_lock);
+
+	hfsplus_sync_fs(sbi->alloc_file->i_sb, 1);
+}
+
+void hfsplus_mark_mdb_dirty(struct super_block *sb)
+{
+	struct hfsplus_sb_info *sbi = HFSPLUS_SB(sb);
+	unsigned long delay;
+
+	if (sb->s_flags & MS_RDONLY)
+		return;
+
+	spin_lock(&sbi->work_lock);
+	if (!sbi->work_queued) {
+		delay = msecs_to_jiffies(dirty_writeback_interval * 10);
+		queue_delayed_work(system_long_wq, &sbi->sync_work, delay);
+		sbi->work_queued = 1;
+	}
+	spin_unlock(&sbi->work_lock);
 }
 
 static void hfsplus_put_super(struct super_block *sb)
@@ -262,8 +282,7 @@ static void hfsplus_put_super(struct super_block *sb)
 
 	dprint(DBG_SUPER, "hfsplus_put_super\n");
 
-	if (!sb->s_fs_info)
-		return;
+	cancel_delayed_work_sync(&sbi->sync_work);
 
 	if (!(sb->s_flags & MS_RDONLY) && sbi->s_vhdr) {
 		struct hfsplus_vh *vhdr = sbi->s_vhdr;
@@ -289,8 +308,8 @@ static void hfsplus_put_super(struct super_block *sb)
 #ifdef CONFIG_HFSPLUS_JOURNAL
 	hfsplus_journaled_deinit(sb);
 #endif
-	kfree(sbi->s_vhdr);
-	kfree(sbi->s_backup_vhdr);
+	kfree(sbi->s_vhdr_buf);
+	kfree(sbi->s_backup_vhdr_buf);
 	unload_nls(sbi->nls);
 	kfree(sb->s_fs_info);
 	sb->s_fs_info = NULL;
@@ -374,7 +393,6 @@ static const struct super_operations hfsplus_sops = {
 	.write_inode	= hfsplus_write_inode,
 	.evict_inode	= hfsplus_evict_inode,
 	.put_super	= hfsplus_put_super,
-	.write_super	= hfsplus_write_super,
 	.sync_fs	= hfsplus_sync_fs,
 	.statfs		= hfsplus_statfs,
 	.remount_fs	= hfsplus_remount,
@@ -395,7 +413,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 	int jnl_ret;
 #endif
 
-	err = -EINVAL;
+	err = -ENOMEM;
 	sbi = kzalloc(sizeof(*sbi), GFP_KERNEL);
 	if (!sbi)
 		goto out;
@@ -403,6 +421,8 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 	sb->s_fs_info = sbi;
 	mutex_init(&sbi->alloc_mutex);
 	mutex_init(&sbi->vh_mutex);
+	spin_lock_init(&sbi->work_lock);
+	INIT_DELAYED_WORK(&sbi->sync_work, delayed_sync_fs);
 	hfsplus_fill_defaults(sbi);
 
 	err = -EINVAL;
@@ -463,14 +483,14 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		be32_to_cpu(vhdr->rsrc_clump_sz) >> sbi->alloc_blksz_shift;
 	if (!sbi->rsrc_clump_blocks)
 		sbi->rsrc_clump_blocks = 1;
-	
+
 	err = generic_check_addressable(sbi->alloc_blksz_shift,
 					sbi->total_blocks);
 	if (err) {
 		printk(KERN_ERR "hfs: filesystem size too large.\n");
 		goto out_free_vhdr;
 	}
-	
+
 	/* Set up operations so we can load metadata */
 	sb->s_op = &hfsplus_sops;
 	sb->s_maxbytes = MAX_LFS_FILESIZE;
@@ -531,7 +551,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 		err = PTR_ERR(root);
 		goto out_put_alloc_file;
 	}
-	
+
 	sb->s_d_op = &hfsplus_dentry_operations;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,4,0)
 	sb->s_root = d_make_root(root);
@@ -601,7 +621,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 			mutex_unlock(&sbi->vh_mutex);
 			if (err)
 				goto out_put_hidden_dir;
-			
+
 			hfsplus_mark_inode_dirty(sbi->hidden_dir,
 						 HFSPLUS_I_CAT_DIRTY);
 		}
@@ -623,8 +643,8 @@ out_close_cat_tree:
 out_close_ext_tree:
 	hfs_btree_close(sbi->ext_tree);
 out_free_vhdr:
-	kfree(sbi->s_vhdr);
-	kfree(sbi->s_backup_vhdr);
+	kfree(sbi->s_vhdr_buf);
+	kfree(sbi->s_backup_vhdr_buf);
 out_unload_nls:
 	unload_nls(sbi->nls);
 	unload_nls(nls);
@@ -702,6 +722,12 @@ static int __init init_hfsplus_fs(void)
 static void __exit exit_hfsplus_fs(void)
 {
 	unregister_filesystem(&hfsplus_fs_type);
+
+	/*
+	 * Make sure all delayed rcu free inodes are flushed before we
+	 * destroy cache.
+	 */
+	rcu_barrier();
 	kmem_cache_destroy(hfsplus_inode_cachep);
 }
 

@@ -7,6 +7,7 @@
  *
  * Inode handling routines
  */
+
 #include <linux/blkdev.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
@@ -486,7 +487,7 @@ struct inode *hfsplus_new_inode(struct super_block *sb, int mode)
 		sbi->file_count++;
 	insert_inode_hash(inode);
 	mark_inode_dirty(inode);
-	sb->s_dirt = 1;
+	hfsplus_mark_mdb_dirty(sb);
 
 	return inode;
 }
@@ -497,7 +498,7 @@ void hfsplus_delete_inode(struct inode *inode)
 
 	if (S_ISDIR(inode->i_mode)) {
 		HFSPLUS_SB(sb)->folder_count--;
-		sb->s_dirt = 1;
+		hfsplus_mark_mdb_dirty(sb);
 		return;
 	}
 	HFSPLUS_SB(sb)->file_count--;
@@ -510,7 +511,7 @@ void hfsplus_delete_inode(struct inode *inode)
 		inode->i_size = 0;
 		hfsplus_file_truncate(inode);
 	}
-	sb->s_dirt = 1;
+	hfsplus_mark_mdb_dirty(sb);
 }
 
 void hfsplus_inode_read_fork(struct inode *inode, struct hfsplus_fork_raw *fork)

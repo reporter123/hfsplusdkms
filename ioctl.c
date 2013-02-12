@@ -79,7 +79,7 @@ static int hfsplus_ioctl_setflags(struct file *file, int __user *user_flags)
 	struct hfsplus_inode_info *hip = HFSPLUS_I(inode);
 	unsigned int flags;
 	int err = 0;
-	
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 	err = mnt_want_write_file(file);
 #else

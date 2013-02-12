@@ -104,7 +104,7 @@ struct hfsplus_vh {
 	#else
 	__be32 journal_info_block;
 	#endif
-	
+
 	__be32 create_date;
 	__be32 modify_date;
 	__be32 backup_date;

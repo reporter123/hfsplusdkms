@@ -1,8 +1,16 @@
-hfsplus-dkms (1.1.0ppa1~precise1) precise; urgency=low
+hfsplus-dkms (1.1.1ppa1~raring1) raring; urgency=low
+
+  *merge with upstream 3.7.6 kernel source
+  *fixed possiable write failure on drives with > 512KB blocks.
+  *automate distro switch with perl script.
+
+ -- Michael Reeves <reeves.87@gmail.com>  Tue, 12 Feb 2013 17:12:51 -0500
+
+hfsplus-dkms (1.1.0ppa1~raring1) raring; urgency=low
   *no change rebuild
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 21 Jan 2013 16:47:47 -0500
 
-hfsplus-dkms (1.1.0ppa1) precise; urgency=low
+hfsplus-dkms (1.1.0ppa1) raring; urgency=low
 
   * change linux-header version requirement
   * make package work with oneiric under pbuilder
@@ -10,7 +18,7 @@ hfsplus-dkms (1.1.0ppa1) precise; urgency=low
   --all users of this package get this feature
  -- Michael Reeves <reeves.87@gmail.com>  Thu, 20 Dec 2012 16:01:47 -0500
 
-hfsplus-dkms (1.0ppa4) precise; urgency=low
+hfsplus-dkms (1.0ppa4) raring; urgency=low
 
   *updated for kernel 3.5
   *compile ok for 3.2 headers
@@ -20,13 +28,13 @@ hfsplus-dkms (1.0ppa4) precise; urgency=low
  -- Michael Reeves <reeves.87@gmail.com>  Wed, 19 Dec 2012 20:30:44 -0400
 
 
-hfsplus-dkms (1.0ppa3) precise; urgency=low
+hfsplus-dkms (1.0ppa3) raring; urgency=low
 
   * fix packaging
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 13 Dec 2012 16:25:01 -0400
 
-hfsplus-dkms (1.0ppa2) precise; urgency=low
+hfsplus-dkms (1.0ppa2) raring; urgency=low
 
   * really activate journaling.
   * fix a build error on older 3.x kernel headers
@@ -34,7 +42,7 @@ hfsplus-dkms (1.0ppa2) precise; urgency=low
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 13 Dec 2012 16:25:01 -0400
 
-hfsplus-dkms (1.0ppa1) precise; urgency=low
+hfsplus-dkms (1.0ppa1) raring; urgency=low
 
   * Initial release of dkms package
 

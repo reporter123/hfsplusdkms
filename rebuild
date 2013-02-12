@@ -1,0 +1,44 @@
+#! /usr/bin/perl
+
+my $filehandle;
+
+sub changedistro{
+	my $distro = shift;
+	my $IN, $OUT;
+	open(IN, "<", "./debian/changelog") or die "cannot open ./debian/changelog";
+	open(OUT, "+>", "./debian/.tmp") or die "cannot create tmp file";
+	
+	while(<IN>)
+	{
+		my $line = $_;
+		
+		if($line =~ m/([a-z]+);/i )
+		{
+			$line =~ s/$1/$distro/ig;
+			
+		}
+		
+		print OUT "$line";
+	}
+	
+	close(IN);
+	close(OUT);
+	
+	unlink("./debian/changelog"), or die("Failed to change version.");
+	rename("./debian/.tmp", "./debian/changelog") or die("Failed to change version.");
+}
+
+open(filehandle, "<", "./debian/distros") or die "cannot open ./debian/distros";
+
+while(<filehandle>)
+{
+	my $line = $_;
+	
+	#cleanse newline as determined by default value for $/
+	chomp($line);
+	changedistro($line);
+	
+	mkdir("./build");
+	system("bzr builddeb --native --result-dir=./build");
+	system("bzr builddeb --source --native --result-dir=./build");
+}
