@@ -286,12 +286,22 @@ static void hfsplus_get_perms(struct inode *inode,
 
 	mode = be16_to_cpu(perms->mode);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
+	i_uid_write(inode, be32_to_cpu(perms->owner));
+	if (!i_uid_read(inode) && !mode)
+#else
 	inode->i_uid = be32_to_cpu(perms->owner);
 	if (!inode->i_uid && !mode)
+#endif
 		inode->i_uid = sbi->uid;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
+	i_gid_write(inode, be32_to_cpu(perms->group));
+	if (!i_gid_read(inode) && !mode)
+#else
 	inode->i_gid = be32_to_cpu(perms->group);
 	if (!inode->i_gid && !mode)
+#endif
 		inode->i_gid = sbi->gid;
 
 	if (dir) {

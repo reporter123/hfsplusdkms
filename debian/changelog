@@ -1,8 +1,14 @@
+hfsplus-dkms (1.1.2ppa1~raring1) raring; urgency=low
+
+  * merge from mainline 3.8r2
+
+ -- Michael Reeves <reeves.87@gmail.com>  Sat, 16 Feb 2013 23:58:41 -0500
+
 hfsplus-dkms (1.1.1ppa1~raring1) raring; urgency=low
 
-  *merge with upstream 3.7.6 kernel source
-  *fixed possiable write failure on drives with > 512KB blocks.
-  *automate distro switch with perl script.
+  * merge with upstream 3.7.6 kernel source
+  * fixed possiable write failure on drives with > 512KB blocks.
+  * automate distro switch with perl script.
 
  -- Michael Reeves <reeves.87@gmail.com>  Tue, 12 Feb 2013 17:12:51 -0500
 

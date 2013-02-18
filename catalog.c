@@ -80,9 +80,13 @@ void hfsplus_cat_set_perms(struct inode *inode, struct hfsplus_perm *perms)
 
 	perms->userflags = HFSPLUS_I(inode)->userflags;
 	perms->mode = cpu_to_be16(inode->i_mode);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
+	perms->owner = cpu_to_be32(i_uid_read(inode));
+	perms->group = cpu_to_be32(i_gid_read(inode));
+#else
 	perms->owner = cpu_to_be32(inode->i_uid);
 	perms->group = cpu_to_be32(inode->i_gid);
-
+#endif
 	if (S_ISREG(inode->i_mode))
 		perms->dev = cpu_to_be32(inode->i_nlink);
 	else if (S_ISBLK(inode->i_mode) || S_ISCHR(inode->i_mode))
