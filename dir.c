@@ -24,8 +24,13 @@ static inline void hfsplus_instantiate(struct dentry *dentry,
 }
 
 /* Find the entry inside dir named dentry->d_name */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
+static struct dentry *hfsplus_lookup(struct inode *dir, struct dentry *dentry,
+				     unsigned int flags)
+#else
 static struct dentry *hfsplus_lookup(struct inode *dir, struct dentry *dentry,
 				     struct nameidata *nd)
+#endif
 {
 	struct inode *inode = NULL;
 	struct hfs_find_data fd;
@@ -434,7 +439,7 @@ out:
 	return res;
 }
 //abi change at least 3.5+
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 static int hfsplus_mknod(struct inode *dir, struct dentry *dentry,
 			 umode_t mode, dev_t rdev)
 #else
@@ -469,7 +474,10 @@ out:
 	return res;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
+static int hfsplus_create(struct inode *dir, struct dentry *dentry, umode_t mode,
+			  bool excl)
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 static int hfsplus_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 			  struct nameidata *nd)
 #else
@@ -480,7 +488,7 @@ static int hfsplus_create(struct inode *dir, struct dentry *dentry, int mode,
 	return hfsplus_mknod(dir, dentry, mode, 0);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 static int hfsplus_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
 #else
 static int hfsplus_mkdir(struct inode *dir, struct dentry *dentry, int mode)

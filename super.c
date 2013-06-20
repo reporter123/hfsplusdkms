@@ -569,7 +569,7 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 #endif
 	if (!sb->s_root) {
 		err = -ENOMEM;
-		goto out_put_hidden_dir;
+		goto out_put_alloc_file;
 	}
 
 	str.len = sizeof(HFSP_HIDDENDIR_NAME) - 1;

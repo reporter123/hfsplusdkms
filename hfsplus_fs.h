@@ -494,7 +494,7 @@ void hfsplus_inode_read_fork(struct inode *, struct hfsplus_fork_raw *);
 void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
 int hfsplus_cat_read_inode(struct inode *, struct hfs_find_data *);
 int hfsplus_cat_write_inode(struct inode *);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 struct inode *hfsplus_new_inode(struct super_block *, umode_t);
 #else
 struct inode *hfsplus_new_inode(struct super_block *, int);
@@ -516,7 +516,7 @@ ssize_t hfsplus_listxattr(struct dentry *dentry, char *buffer, size_t size);
 int hfsplus_parse_options(char *, struct hfsplus_sb_info *);
 int hfsplus_parse_options_remount(char *input, int *force);
 void hfsplus_fill_defaults(struct hfsplus_sb_info *);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 int hfsplus_show_options(struct seq_file *, struct dentry *);
 #else
 int hfsplus_show_options(struct seq_file *, struct vfsmount *);
@@ -576,8 +576,17 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_ut2mt(t)		__hfsp_ut2mt((t).tv_sec)
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
 
+//new function not present before
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
 #define set_nlink(node,i) node = i
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
+#define	i_uid_read(inode) inode->i_uid
+#define i_uid_write(inode, uid) inode->i_uid = uid
+
+#define	i_gid_read(inode) inode->i_gid
+#define i_gid_write(inode, gid) inode->i_gid = gid
 #endif
 
 #endif
