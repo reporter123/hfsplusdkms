@@ -1,6 +1,10 @@
 hfsplus-dkms (1.1.2ppa1~raring1) raring; urgency=low
 
-  * merge from mainline 3.8r2
+  * merge from mainline 3.8
+  * i_uid_read, i_uid_write, i_gid_read and i_gid_write #defined on old systems that don't have them
+  * twidled version triggers to backport new functionallity where possiable.
+  * vm_trucate no longer called on any kernel version was deprated as of 3.0 no longer part of abi on newest kernels. Module already does not support pre 3.0 kernels.
+
 
  -- Michael Reeves <reeves.87@gmail.com>  Sat, 16 Feb 2013 23:58:41 -0500
 
