@@ -10,6 +10,12 @@
 #ifndef _LINUX_HFSPLUS_FS_H
 #define _LINUX_HFSPLUS_FS_H
 
+#ifdef pr_fmt
+#undef pr_fmt
+#endif
+
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/fs.h>
 #include <linux/mutex.h>
 #include <linux/buffer_head.h>
@@ -51,10 +57,17 @@
 #else
 #define DBG_MASK	(0)
 #endif
+#define hfs_dbg(flg, fmt, ...)					\
+do {								\
+	if (DBG_##flg & DBG_MASK)				\
+		printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__);	\
+} while (0)
 
-#define dprint(flg, fmt, args...) \
-	if (flg & DBG_MASK) \
-		printk(fmt , ## args)
+#define hfs_dbg_cont(flg, fmt, ...)				\
+do {								\
+	if (DBG_##flg & DBG_MASK)				\
+		pr_cont(fmt, ##__VA_ARGS__);			\
+} while (0)
 
 /* Runtime config options */
 #define HFSPLUS_DEF_CR_TYPE    0x3F3F3F3F  /* '????' */
@@ -242,7 +255,7 @@ struct hfsplus_sb_info {
 	uid_t uid;
 	gid_t gid;
 #endif
-	
+
 	int part, session;
 	unsigned long flags;
 
@@ -410,6 +423,7 @@ static inline unsigned short hfsplus_min_io_size(struct super_block *sb)
 #define HFSPLUS_IOC_EXT2_GETFLAGS	FS_IOC_GETFLAGS
 #define HFSPLUS_IOC_EXT2_SETFLAGS	FS_IOC_SETFLAGS
 
+
 /*
  * hfs+-specific ioctl for making the filesystem bootable
  */
@@ -575,12 +589,20 @@ int hfsplus_uni2asc(struct super_block *,
 		const struct hfsplus_unistr *, char *, int *);
 int hfsplus_asc2uni(struct super_block *,
 		struct hfsplus_unistr *, int, const char *, int);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+int hfsplus_hash_dentry(const struct dentry *dentry, struct qstr *str);
+int hfsplus_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
+		unsigned int len, const char *str, const struct qstr *name);
+
+#else
 int hfsplus_hash_dentry(const struct dentry *dentry,
 		const struct inode *inode, struct qstr *str);
 int hfsplus_compare_dentry(const struct dentry *parent,
 		const struct inode *pinode,
 		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
+#endif
+
 
 /* wrapper.c */
 int hfsplus_read_wrapper(struct super_block *);

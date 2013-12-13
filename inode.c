@@ -14,6 +14,7 @@
 #include <linux/pagemap.h>
 #include <linux/mpage.h>
 #include <linux/sched.h>
+#include <linux/aio.h>
 
 #include "hfsplus_fs.h"
 #include "hfsplus_raw.h"
@@ -229,8 +230,13 @@ const struct dentry_operations hfsplus_dentry_operations = {
 	.d_compare    = hfsplus_compare_dentry,
 };
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+static struct dentry *hfsplus_file_lookup(struct inode *dir,
+		struct dentry *dentry, unsigned int flags)
+#else
 static struct dentry *hfsplus_file_lookup(struct inode *dir,
 		struct dentry *dentry, struct nameidata *nd)
+#endif
 {
 	struct hfs_find_data fd;
 	struct super_block *sb = dir->i_sb;
@@ -410,7 +416,7 @@ int hfsplus_file_fsync(struct file *file, loff_t start, loff_t end,
 			if (!error)
 				error = error2;
 		} else {
-			printk(KERN_ERR "hfs: sync non-existent attributes tree\n");
+			pr_err("sync non-existent attributes tree\n");
 		}
 	}
 
@@ -629,7 +635,7 @@ int hfsplus_cat_read_inode(struct inode *inode, struct hfs_find_data *fd)
 		inode->i_ctime = hfsp_mt2ut(file->attribute_mod_date);
 		HFSPLUS_I(inode)->create_date = file->create_date;
 	} else {
-		printk(KERN_ERR "hfs: bad catalog entry used to create inode\n");
+		pr_err("bad catalog entry used to create inode\n");
 		res = -EIO;
 	}
 	return res;

@@ -76,15 +76,15 @@ void print_volume_header(struct super_block *sb)
 	int i;
 	unsigned char *vh_ptr = (unsigned char *)HFSPLUS_SB(sb)->s_vhdr;
 
-	dprint(DBG_JOURNAL, "VOLUME HEADER\n");
+	hfs_dbg(JOURNAL, "VOLUME HEADER\n");
 	for (i=0; i<102; i++)
-		dprint(DBG_JOURNAL, "%x ", vh_ptr[i]);
-	dprint(DBG_JOURNAL, "\n");
+		hfs_dbg(JOURNAL, "%x ", vh_ptr[i]);
+	hfs_dbg(JOURNAL, "\n");
 }
 
 static void print_journal_header(struct hfsplus_journal_header *jh)
 {
-	dprint(DBG_JOURNAL, "HFS+-fs: magic: %x\n endian: %x\n start: %llx\n end: %llx\n size: %llx\n blhdr_size: %x\n checksum: %x\n jhdr_size: %x\n", jh->magic, jh->endian, jh->start, jh->end, jh->size, jh->blhdr_size, jh->checksum, jh->jhdr_size);
+	hfs_dbg(JOURNAL, "HFS+-fs: magic: %x\n endian: %x\n start: %llx\n end: %llx\n size: %llx\n blhdr_size: %x\n checksum: %x\n jhdr_size: %x\n", jh->magic, jh->endian, jh->start, jh->end, jh->size, jh->blhdr_size, jh->checksum, jh->jhdr_size);
 }
 
 static int map_journal_header(struct super_block *sb)
@@ -94,7 +94,7 @@ static int map_journal_header(struct super_block *sb)
 
 	jnl->jh_offset = be64_to_cpu(jnl->jibhdr->offset);
 	jh_block_number = jnl->jh_offset >> sb->s_blocksize_bits;
-	dprint(DBG_JOURNAL, "HFS+-fs: jh_block_number: %x\n", jh_block_number);
+	hfs_dbg(JOURNAL, "HFS+-fs: jh_block_number: %x\n", jh_block_number);
 	jnl->jh_bh = sb_bread(sb, HFSPLUS_SB(sb)->blockoffset + jh_block_number);
 	if (!jnl->jh_bh) {
 		printk("HFS+-fs Line=%d: Error in buffer read\n", __LINE__);
@@ -151,7 +151,7 @@ int hfsplus_journaled_create(struct super_block *sb)
 	struct hfsplus_journal_header *jhdr;
 	u64 jibsize = be64_to_cpu(HFSPLUS_SB(sb)->jnl.jibhdr->offset);
 
-	dprint(DBG_JOURNAL, "sb->s_blocksize: %lx, jibsize: %llx\n", sb->s_blocksize, jibsize);
+	hfs_dbg(JOURNAL, "sb->s_blocksize: %lx, jibsize: %llx\n", sb->s_blocksize, jibsize);
 
 	/* Journal size is not aligned */
 	if (((jibsize >> sb->s_blocksize_bits) << sb->s_blocksize_bits) != jibsize) {
@@ -263,7 +263,7 @@ static int hfsplus_journaled_write_transaction(struct super_block *sb, struct hf
 	tr_offset = jnl->jhdr->end + jnl->jh_offset;
 	for (i=0; i < total_size / HFSPLUS_SECTOR_SIZE; i++) {
 		tr_sector_number = tr_offset >> HFSPLUS_SECTOR_SHIFT;
-		dprint(DBG_JTRANS, "tr_offset: %llx, tr_sector_number: %x\n", tr_offset, tr_sector_number);
+		hfs_dbg(JTRANS, "tr_offset: %llx, tr_sector_number: %x\n", tr_offset, tr_sector_number);
 
 		tr_bh = sb_bread512(sb, HFSPLUS_SB(sb)->blockoffset + tr_sector_number, tr_buf);
 		if (tr_bh == NULL) {
@@ -284,7 +284,7 @@ static int hfsplus_journaled_write_transaction(struct super_block *sb, struct hf
 
 		/* Check tr_offset reaches at the end of journal buffer */
 		if (tr_offset == (jnl->jh_offset + jnl->jhdr->size)) {
-			dprint(DBG_JTRANS, "tr_offset: %llx, jnl->jhdr->size: %llx, jh_offset: %llx\n", tr_offset, jnl->jhdr->size, jnl->jh_offset);
+			hfs_dbg(JTRANS, "tr_offset: %llx, jnl->jhdr->size: %llx, jh_offset: %llx\n", tr_offset, jnl->jhdr->size, jnl->jh_offset);
 			tr_offset = jnl->jh_offset + jnl->jhdr->jhdr_size; /* Set to the beginning of the journal buffer */
 		}
 	}
@@ -297,7 +297,7 @@ static int hfsplus_journaled_write_transaction(struct super_block *sb, struct hf
 	tr->jnl         = jnl;
 	tr->tbuf_size = bufsize;
 	tr->sector_number = sector_num;
-	dprint(DBG_JTRANS, "end: %llx, start: %llx, sector_number: %llx\n", tr->journal_start, tr->journal_end, tr->sector_number);
+	hfs_dbg(JTRANS, "end: %llx, start: %llx, sector_number: %llx\n", tr->journal_start, tr->journal_end, tr->sector_number);
 
 	kfree(tr->tbuf);
 	tr->tbuf = NULL;
@@ -329,7 +329,7 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 	u32 total_size;
 	struct hfsplus_journal *jnl;
 
-	dprint(DBG_JTRANS, "Entering into %s()\n", __FUNCTION__);
+	hfs_dbg(JTRANS, "Entering into %s()\n", __FUNCTION__);
 
 	if (sbp == NULL) {
 		inode = page->mapping->host;
@@ -339,7 +339,7 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 
 	jnl =	&HFSPLUS_SB(sb)->jnl;
 	if (jnl->journaled != HFSPLUS_JOURNAL_PRESENT) {
-		dprint(DBG_JTRANS, "%s: Not a journaled volume, return\n", __func__);
+		hfs_dbg(JTRANS, "%s: Not a journaled volume, return\n", __func__);
 		return HFSPLUS_JOURNAL_SUCCESS;
 	}
 
@@ -361,7 +361,7 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 		* Check with Allocation, Extent, Catalog and Attribute file.
 		* This is compared in order of the fequency of their occurance.
 		*/
-		dprint(DBG_JTRANS, "Need to write block number: %x to journal log\n", block_num);
+		hfs_dbg(JTRANS, "Need to write block number: %x to journal log\n", block_num);
 		if ((block_num >= jnl->catalog_block) && (block_num <= jnl->catalog_block + HFSPLUS_I(inode)->first_blocks)) {
 			sector_num = (block_num * sb->s_blocksize) / HFSPLUS_SECTOR_SIZE;
 			bufsize = PAGE_SIZE;
@@ -381,9 +381,9 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 		bufsize = HFSPLUS_SECTOR_SIZE;
 	}
 
-	dprint(DBG_JTRANS, "sector number: %llx, bufsize: %x\n", sector_num, bufsize);
+	hfs_dbg(JTRANS, "sector number: %llx, bufsize: %x\n", sector_num, bufsize);
 	if (sector_num == 0 || bufsize == 0) {
-		printk("HFS+-fs: Wrong sector number: %llx or buffer size: %x. Block number: %x\n", sector_num, bufsize, block_num);
+		pr_err("HFS+-fs: Wrong sector number: %llx or buffer size: %x. Block number: %x\n", sector_num, bufsize, block_num);
 		up(&jnl->jnl_lock);
 		return HFSPLUS_JOURNAL_FAIL;
 	}
@@ -397,7 +397,7 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 
 	if ((tr_size + (u64)total_size) > (jnl->jhdr->size - (u64)jnl->jhdr->jhdr_size)) {
 		/* TODO: Free some memory from journal buffer */
-		printk("Not enough free memory for writing this transaction\n");
+		pr_err("Not enough free memory for writing this transaction\n");
 		up(&jnl->jnl_lock);
 		return HFSPLUS_JOURNAL_FAIL;
 	}
@@ -408,7 +408,7 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 	} else
 		ret = hfsplus_journaled_write_transaction(sb, jnl, NULL, HFSPLUS_SB(sb)->s_vhdr, sector_num, bufsize);
 	if (ret == HFSPLUS_JOURNAL_FAIL) {
-		printk("HFS+-fs: Error in hfsplus_journaled_write_transaction\n");
+		pr_err("HFS+-fs: Error in hfsplus_journaled_write_transaction\n");
 		up(&jnl->jnl_lock);
 		return ret;
 	}
@@ -416,7 +416,7 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 	jnl->jhdr->end = jnl->active_tr->journal_end;
 	ret = hfsplus_write_journal_header(sb);
 
-	dprint(DBG_JTRANS, "HFS+-fs: New transaction number: %d\n", jnl->sequence_num);
+	hfs_dbg(JTRANS, "HFS+-fs: New transaction number: %d\n", jnl->sequence_num);
 
 	up(&jnl->jnl_lock);
 	return ret;
@@ -429,7 +429,7 @@ void hfsplus_journaled_end_transaction(struct page *page, struct super_block *sb
 	struct hfsplus_journal *jnl;
 	struct list_head *liter = NULL, *tliter = NULL;
 
-	dprint(DBG_JTRANS, "Entering into %s()\n", __FUNCTION__);
+	hfs_dbg(JTRANS, "Entering into %s()\n", __FUNCTION__);
 
 	if (sbp == NULL) {
 		inode = page->mapping->host;
@@ -439,7 +439,7 @@ void hfsplus_journaled_end_transaction(struct page *page, struct super_block *sb
 
 	jnl =	&HFSPLUS_SB(sb)->jnl;
 	if (jnl->journaled != HFSPLUS_JOURNAL_PRESENT) {
-		dprint(DBG_JOURNAL, "%s: Not a journaled volume, return\n", __func__);
+		hfs_dbg(JOURNAL, "%s: Not a journaled volume, return\n", __func__);
 		return;
 	}
 
@@ -450,7 +450,7 @@ void hfsplus_journaled_end_transaction(struct page *page, struct super_block *sb
 	 */
 	list_for_each_safe(liter, tliter, &jnl->tr_list) {
 		struct hfsplus_transaction *tr = list_entry(liter, struct hfsplus_transaction, list);
-		dprint(DBG_JTRANS, "start: %llx, end: %llx, sequence_num: %d, sector_num: %llx\n", tr->journal_start, tr->journal_end, tr->sequence_num, tr->sector_number);
+		hfs_dbg(JTRANS, "start: %llx, end: %llx, sequence_num: %d, sector_num: %llx\n", tr->journal_start, tr->journal_end, tr->sequence_num, tr->sector_number);
 		jnl->jhdr->start = tr->journal_end;
 		hfsplus_write_journal_header(sb);
 		list_del(&tr->list);
@@ -479,13 +479,13 @@ static int hfsplus_journal_replay(struct super_block *sb)
 	__be32 bufsize;
 
 	if (jh->start == jh->end) {
-		dprint(DBG_JREPLAY, "HFS+-fs: Journal is empty, nothing to replay\n");
+		hfs_dbg(JREPLAY, "HFS+-fs: Journal is empty, nothing to replay\n");
 		ret = hfsplus_replay_write_journal_header(sb);
 		return ret;
 	}
 
 	if ((jh->start > jh->size) || (jh->end > jh->size)) {
-		printk("HFS+-fs: Wrong start or end offset, start: %llx, end: %llx, jh_offset: %llx, size: %llx\n", jh->start, jh->end, jnl->jh_offset, jh->size);
+		pr_err("HFS+-fs: Wrong start or end offset, start: %llx, end: %llx, jh_offset: %llx, size: %llx\n", jh->start, jh->end, jnl->jh_offset, jh->size);
 		return ret;
 	}
 
@@ -499,7 +499,7 @@ static int hfsplus_journal_replay(struct super_block *sb)
 			brelse(blhdr_bh);
 
 		start_sector_number = (jh->start + jnl->jh_offset) >> HFSPLUS_SECTOR_SHIFT;
-		dprint(DBG_JREPLAY, "start: %llx, start_sector_number: %x\n", jh->start, start_sector_number);
+		hfs_dbg(JREPLAY, "start: %llx, start_sector_number: %x\n", jh->start, start_sector_number);
 		/* TODO: Wrap around */
 		blhdr_bh = sb_bread512(sb, HFSPLUS_SB(sb)->blockoffset + start_sector_number, blhdr);
 		if (!blhdr_bh) {
@@ -511,7 +511,7 @@ static int hfsplus_journal_replay(struct super_block *sb)
 		if (jnl->flags == HFSPLUS_JOURNAL_SWAP)
 			swap_block_list_header(blhdr);
 
-		dprint(DBG_JREPLAY, "HFS+-fs: num_blocks: %x, bytes_used: %x\n", blhdr->num_blocks, blhdr->bytes_used);
+		hfs_dbg(JREPLAY, "HFS+-fs: num_blocks: %x, bytes_used: %x\n", blhdr->num_blocks, blhdr->bytes_used);
 		/* Point to the second block in the Volume, first block is already in block list header */
 		tr_offset = jnl->jh_offset + jh->start + jh->blhdr_size;
 
@@ -519,12 +519,12 @@ static int hfsplus_journal_replay(struct super_block *sb)
 			bufsize = blhdr->binfo[i].bsize;
 			disk_offset = blhdr->binfo[i].bnum << HFSPLUS_SECTOR_SHIFT;
 
-			dprint(DBG_JREPLAY, "[i:%x] bnum: %llx, bsize: %x, bufsize: %x\n", i, blhdr->binfo[i].bnum, blhdr->binfo[i].bsize, bufsize);
+			hfs_dbg(JREPLAY, "[i:%x] bnum: %llx, bsize: %x, bufsize: %x\n", i, blhdr->binfo[i].bnum, blhdr->binfo[i].bsize, bufsize);
 
 			while (bufsize > 0) {
 				/* Read one block */
 				tr_sector_number = tr_offset >> HFSPLUS_SECTOR_SHIFT;
-				dprint(DBG_JREPLAY, "[i:%x] tr_sector_number: %x, tr_offset: %llx\n", i, tr_sector_number, tr_offset);
+				hfs_dbg(JREPLAY, "[i:%x] tr_sector_number: %x, tr_offset: %llx\n", i, tr_sector_number, tr_offset);
 				tr_bh = sb_bread512(sb, HFSPLUS_SB(sb)->blockoffset + tr_sector_number, tr_buf);
 				if (!tr_bh) {
 					printk("HFS+-fs Line=%d: Error in read\n", __LINE__);
@@ -535,7 +535,7 @@ static int hfsplus_journal_replay(struct super_block *sb)
 				}
 
 				disk_sector_number = disk_offset >> HFSPLUS_SECTOR_SHIFT;
-				dprint(DBG_JREPLAY, "[i:%x] disk_sector_number: %x, disk_offset: %llx, bufsize: %x\n", i, disk_sector_number, disk_offset, bufsize);
+				hfs_dbg(JREPLAY, "[i:%x] disk_sector_number: %x, disk_offset: %llx, bufsize: %x\n", i, disk_sector_number, disk_offset, bufsize);
 				/* Read the same sector from the Volume */
 				disk_bh = sb_bread512(sb, HFSPLUS_SB(sb)->blockoffset + disk_sector_number, disk_buf);
 				if (!disk_bh) {
@@ -583,7 +583,7 @@ static int hfsplus_journal_replay(struct super_block *sb)
 	if (jh->start == jh->end) {
 		ret = hfsplus_replay_write_journal_header(sb);
 	} else {
-		printk("HFS+-fs: %s Error in journal replay\n", __func__);
+		pr_err("HFS+-fs: %s Error in journal replay\n", __func__);
 	}
 
 	/* Populate Volume Header with new values */
@@ -591,12 +591,12 @@ static int hfsplus_journal_replay(struct super_block *sb)
 		struct hfsplus_vh *vhdr = HFSPLUS_SB(sb)->s_vhdr;
 		struct buffer_head *bh;
 
-		dprint(DBG_JREPLAY, "Populate Volume Header again\n");
+		hfs_dbg(JREPLAY, "Populate Volume Header again\n");
 		HFSPLUS_SB(sb)->s_vhdr->attributes |= cpu_to_be32(HFSPLUS_VOL_UNMNT);
 
 		bh = sb_bread512(sb, HFSPLUS_SB(sb)->blockoffset + HFSPLUS_VOLHEAD_SECTOR, vhdr);
 		if (!bh) {
-			printk("HFS+-fs Line=%d: Error in read\n", __LINE__);
+			pr_err("HFS+-fs Line=%d: Error in read\n", __LINE__);
 			HFSPLUS_SB(sb)->s_vhdr = NULL;
 			up(&jnl->jnl_lock);
 			return HFSPLUS_JOURNAL_FAIL;
@@ -604,7 +604,7 @@ static int hfsplus_journal_replay(struct super_block *sb)
 
 		/* should still be the same... */
 		if (be16_to_cpu(vhdr->signature) != HFSPLUS_VOLHEAD_SIG) {
-			printk("Volume header signature (%x) is wrong\n", be16_to_cpu(vhdr->signature));
+			pr_err("Volume header signature (%x) is wrong\n", be16_to_cpu(vhdr->signature));
 			brelse(bh);
 			HFSPLUS_SB(sb)->s_vhdr = NULL;
 			up(&jnl->jnl_lock);
@@ -634,7 +634,7 @@ int hfsplus_journaled_check(struct super_block *sb)
 	}
 
 	jib = (struct hfsplus_journal_info_block *)(HFSPLUS_SB(sb)->jnl.jibhdr);
-	dprint(DBG_JOURNAL, "HFS+-fs: be32_to_cpu(jib->flags): %x\n", be32_to_cpu(jib->flags));
+	hfs_dbg(JOURNAL, "HFS+-fs: be32_to_cpu(jib->flags): %x\n", be32_to_cpu(jib->flags));
 
 	/* Journal is on another volume, and the "on this volume" flag
 	* isn't set
@@ -653,7 +653,7 @@ int hfsplus_journaled_check(struct super_block *sb)
 		return HFSPLUS_JOURNAL_INCONSISTENT;
 	}
 
-	dprint(DBG_JOURNAL, "HFS+-fs: Found Info Block and verified successfully.\n");
+	hfs_dbg(JOURNAL, "HFS+-fs: Found Info Block and verified successfully.\n");
 	jh = (struct hfsplus_journal_header *)(HFSPLUS_SB(sb)->jnl.jhdr);
 
 	org_checksum = jh->checksum;
@@ -683,7 +683,7 @@ int hfsplus_journaled_check(struct super_block *sb)
 	}
 	jh->checksum = checksum;
 
-	dprint(DBG_JOURNAL, "HFS+-fs: No problem in magic number, endian and checksum\n");
+	hfs_dbg(JOURNAL, "HFS+-fs: No problem in magic number, endian and checksum\n");
 
 	/* Compare start to end */
 	if(jh->start == jh->end) {
@@ -697,7 +697,7 @@ int hfsplus_journaled_check(struct super_block *sb)
 			printk("HFS+-fs: Journal is non empty means inconsistent, please run fsck.hfsplus\n");
 			return HFSPLUS_JOURNAL_INCONSISTENT;
 		} else
-			dprint(DBG_JOURNAL, "HFS+-fs: Journal replay done\n");
+			hfs_dbg(JOURNAL, "HFS+-fs: Journal replay done\n");
 	}
 
 	return HFSPLUS_JOURNAL_CONSISTENT;
@@ -717,10 +717,10 @@ void hfsplus_journaled_init(struct super_block *sb, struct hfsplus_vh *vhdr)
 	jnl->alloc_block = be32_to_cpu(vhdr->alloc_file.extents[0].start_block);
 	jnl->ext_block = be32_to_cpu(vhdr->ext_file.extents[0].start_block);
 	jnl->catalog_block = be32_to_cpu(vhdr->cat_file.extents[0].start_block);
-	dprint(DBG_JOURNAL, "alloc_block: %x, ext_block: %x, catalog_block: %x\n", jnl->alloc_block, jnl->ext_block, jnl->catalog_block);
+	hfs_dbg(JOURNAL, "alloc_block: %x, ext_block: %x, catalog_block: %x\n", jnl->alloc_block, jnl->ext_block, jnl->catalog_block);
 
 	if (vhdr->attributes & cpu_to_be32(HFSPLUS_VOL_JOURNALED)) {
-		dprint(DBG_JOURNAL,"HFS+-fs: Journaled filesystem\n");
+		hfs_dbg(JOURNAL,"HFS+-fs: Journaled filesystem\n");
 		jnl->jib_offset = be32_to_cpu(vhdr->journal_info_block);
 		/* Check the journal info block to find the block # of the journal */
 		jnl->jib_bh = sb_bread(sb, HFSPLUS_SB(sb)->blockoffset + jnl->jib_offset);
@@ -730,12 +730,12 @@ void hfsplus_journaled_init(struct super_block *sb, struct hfsplus_vh *vhdr)
 		}
 		jnl->jibhdr = (struct hfsplus_journal_info_block *)(jnl->jib_bh->b_data);
 		jib_flags = be32_to_cpu(jnl->jibhdr->flags);
-		dprint(DBG_JOURNAL, "HFS+-fs: jib_flags: %x\n", jib_flags);
+		hfs_dbg(JOURNAL, "HFS+-fs: jib_flags: %x\n", jib_flags);
 		if ((jib_flags & HFSPLUS_JOURNAL_ON_OTHER_DEVICE) && !(jib_flags & HFSPLUS_JOURNAL_IN_FS))
 			goto init_fail;
 
 		if (jib_flags & HFSPLUS_JOURNAL_NEED_INIT) {
-			dprint(DBG_JOURNAL, "HFS+-fs: Journal is not created\n");
+			hfs_dbg(JOURNAL, "HFS+-fs: Journal is not created\n");
 			if (hfsplus_journaled_create(sb) == 0) {
 				HFSPLUS_SB(sb)->jnl.jibhdr->flags &= be32_to_cpu(~HFSPLUS_JOURNAL_NEED_INIT);
 				/* write it to disk */

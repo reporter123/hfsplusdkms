@@ -108,7 +108,7 @@ again:
 		} else if (!dentry->d_fsdata)
 			dentry->d_fsdata = (void *)(unsigned long)cnid;
 	} else {
-		printk(KERN_ERR "hfs: invalid catalog entry type in lookup\n");
+		pr_err("invalid catalog entry type in lookup\n");
 		err = -EIO;
 		goto fail;
 	}
@@ -126,9 +126,13 @@ fail:
 	return ERR_PTR(err);
 }
 
-static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+static int hfsplus_readdir(struct file *file, struct dir_context *ctx)
+#else
+static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
+#endif
 {
-	struct inode *inode = file_inode(filp);
+	struct inode *inode = file_inode(file);
 	struct super_block *sb = inode->i_sb;
 	int len, err;
 	char strbuf[HFSPLUS_MAX_STRLEN + 1];
@@ -136,8 +140,15 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	struct hfs_find_data fd;
 	struct hfsplus_readdir_data *rd;
 	u16 type;
+	loff_t	pos;
 
-	if (filp->f_pos >= inode->i_size)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+	pos=ctx->pos;
+#else
+	pos=file->f_pos;
+#endif
+	
+	if (file->f_pos >= inode->i_size)
 		return 0;
 
 	err = hfs_find_init(HFSPLUS_SB(sb)->cat_tree, &fd);
@@ -148,14 +159,17 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	if (err)
 		goto out;
 
-	switch ((u32)filp->f_pos) {
-	case 0:
+	if (pos == 0) {
 		/* This is completely artificial... */
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+		if (!dir_emit_dot(file, ctx))
+#else
 		if (filldir(dirent, ".", 1, 0, inode->i_ino, DT_DIR))
+#endif
 			goto out;
-		filp->f_pos++;
-		/* fall through */
-	case 1:
+		pos = 1;
+	}
+	if (pos == 1) {
 		if (fd.entrylength > sizeof(entry) || fd.entrylength < 0) {
 			err = -EIO;
 			goto out;
@@ -164,31 +178,43 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		hfs_bnode_read(fd.bnode, &entry, fd.entryoffset,
 			fd.entrylength);
 		if (be16_to_cpu(entry.type) != HFSPLUS_FOLDER_THREAD) {
-			printk(KERN_ERR "hfs: bad catalog folder thread\n");
+			pr_err("bad catalog folder thread\n");
 			err = -EIO;
 			goto out;
 		}
 		if (fd.entrylength < HFSPLUS_MIN_THREAD_SZ) {
-			printk(KERN_ERR "hfs: truncated catalog thread\n");
+			pr_err("truncated catalog thread\n");
 			err = -EIO;
 			goto out;
 		}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+		ctx->pos=pos;
+		if (!dir_emit(ctx, "..", 2,
+			be32_to_cpu(entry.thread.parentID), DT_DIR))
+#else
+		file->f_pos=pos;
 		if (filldir(dirent, "..", 2, 1,
-			    be32_to_cpu(entry.thread.parentID), DT_DIR))
-			goto out;
-		filp->f_pos++;
-		/* fall through */
-	default:
-		if (filp->f_pos >= inode->i_size)
-			goto out;
-		err = hfs_brec_goto(&fd, filp->f_pos - 1);
-		if (err)
-			goto out;
-	}
+			be32_to_cpu(entry.thread.parentID), DT_DIR))
 
+#endif
+			goto out;
+		pos = 2;
+	}
+	
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+	ctx->pos=pos;
+#else
+	file->f_pos=pos;
+#endif
+
+	if (pos >= inode->i_size)
+		goto out;
+	err = hfs_brec_goto(&fd, pos - 1);
+	if (err)
+		goto out;
 	for (;;) {
 		if (be32_to_cpu(fd.key->cat.parent) != inode->i_ino) {
-			printk(KERN_ERR "hfs: walked past end of dir\n");
+			pr_err("walked past end of dir\n");
 			err = -EIO;
 			goto out;
 		}
@@ -208,7 +234,7 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 		if (type == HFSPLUS_FOLDER) {
 			if (fd.entrylength <
 					sizeof(struct hfsplus_cat_folder)) {
-				printk(KERN_ERR "hfs: small dir entry\n");
+				pr_err("small dir entry\n");
 				err = -EIO;
 				goto out;
 			}
@@ -216,44 +242,64 @@ static int hfsplus_readdir(struct file *filp, void *dirent, filldir_t filldir)
 			    HFSPLUS_SB(sb)->hidden_dir->i_ino ==
 					be32_to_cpu(entry.folder.id))
 				goto next;
-			if (filldir(dirent, strbuf, len, filp->f_pos,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+			ctx->pos=pos;
+			if (!dir_emit(ctx, strbuf, len,
 				    be32_to_cpu(entry.folder.id), DT_DIR))
+#else
+			file->f_pos = pos;
+			if (filldir(dirent, strbuf, len, file->f_pos,
+				    be32_to_cpu(entry.folder.id), DT_DIR))
+#endif
 				break;
 		} else if (type == HFSPLUS_FILE) {
 			if (fd.entrylength < sizeof(struct hfsplus_cat_file)) {
-				printk(KERN_ERR "hfs: small file entry\n");
+				pr_err("small file entry\n");
 				err = -EIO;
 				goto out;
 			}
-			if (filldir(dirent, strbuf, len, filp->f_pos,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+			ctx->pos=pos;
+			if (!dir_emit(ctx, strbuf, len,
 				    be32_to_cpu(entry.file.id), DT_REG))
+#else
+			file->f_pos = pos;
+			if (filldir(dirent, strbuf, len, file->f_pos,
+				    be32_to_cpu(entry.file.id), DT_REG))
+#endif
 				break;
 		} else {
-			printk(KERN_ERR "hfs: bad catalog entry type\n");
+			pr_err("bad catalog entry type\n");
 			err = -EIO;
 			goto out;
 		}
 next:
-		filp->f_pos++;
-		if (filp->f_pos >= inode->i_size)
+		pos++;
+		if (pos >= inode->i_size)
 			goto out;
+		
 		err = hfs_brec_goto(&fd, 1);
 		if (err)
 			goto out;
 	}
-	rd = filp->private_data;
+	rd = file->private_data;
 	if (!rd) {
 		rd = kmalloc(sizeof(struct hfsplus_readdir_data), GFP_KERNEL);
 		if (!rd) {
 			err = -ENOMEM;
 			goto out;
 		}
-		filp->private_data = rd;
-		rd->file = filp;
+		file->private_data = rd;
+		rd->file = file;
 		list_add(&rd->list, &HFSPLUS_I(inode)->open_dir_list);
 	}
 	memcpy(&rd->key, fd.key, sizeof(struct hfsplus_cat_key));
 out:
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+	ctx->pos=pos;
+#else
+	file->f_pos=pos;
+#endif
 	hfs_find_exit(&fd);
 	return err;
 }
@@ -560,7 +606,11 @@ const struct inode_operations hfsplus_dir_inode_operations = {
 const struct file_operations hfsplus_dir_operations = {
 	.fsync		= hfsplus_file_fsync,
 	.read		= generic_read_dir,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
+	.iterate	= hfsplus_readdir,
+#else
 	.readdir	= hfsplus_readdir,
+#endif
 	.unlocked_ioctl = hfsplus_ioctl,
 	.llseek		= generic_file_llseek,
 	.release	= hfsplus_dir_release,
