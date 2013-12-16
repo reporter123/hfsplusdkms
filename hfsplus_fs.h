@@ -248,13 +248,8 @@ struct hfsplus_sb_info {
 
 	umode_t umask;
 	
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
-	kuid_t uid;
-	kgid_t gid;
-#else
 	uid_t uid;
 	gid_t gid;
-#endif
 
 	int part, session;
 	unsigned long flags;
@@ -589,20 +584,12 @@ int hfsplus_uni2asc(struct super_block *,
 		const struct hfsplus_unistr *, char *, int *);
 int hfsplus_asc2uni(struct super_block *,
 		struct hfsplus_unistr *, int, const char *, int);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-int hfsplus_hash_dentry(const struct dentry *dentry, struct qstr *str);
-int hfsplus_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
-		unsigned int len, const char *str, const struct qstr *name);
-
-#else
 int hfsplus_hash_dentry(const struct dentry *dentry,
 		const struct inode *inode, struct qstr *str);
 int hfsplus_compare_dentry(const struct dentry *parent,
 		const struct inode *pinode,
 		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
-#endif
-
 
 /* wrapper.c */
 int hfsplus_read_wrapper(struct super_block *);

@@ -230,13 +230,8 @@ const struct dentry_operations hfsplus_dentry_operations = {
 	.d_compare    = hfsplus_compare_dentry,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-static struct dentry *hfsplus_file_lookup(struct inode *dir,
-		struct dentry *dentry, unsigned int flags)
-#else
 static struct dentry *hfsplus_file_lookup(struct inode *dir,
 		struct dentry *dentry, struct nameidata *nd)
-#endif
 {
 	struct hfs_find_data fd;
 	struct super_block *sb = dir->i_sb;
