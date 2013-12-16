@@ -620,17 +620,19 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_ut2mt(t)		__hfsp_ut2mt((t).tv_sec)
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
 
-//new function not present before
+//new function not present before 3.2
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
 #define set_nlink(node,i) node = i
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
+//Remove for kernel 3.5+ these define a actual funtions by these names
 #define	i_uid_read(inode) inode->i_uid
 #define i_uid_write(inode, uid) inode->i_uid = uid
-
+//Remove for kernel 3.5+ these define a actual funtions by these names
 #define	i_gid_read(inode) inode->i_gid
 #define i_gid_write(inode, gid) inode->i_gid = gid
-#endif
+
+//Remove for kernel 3.9+ these define an actual funtion by this name
+#define file_inode(file) file->f_path.dentry->d_inode
 
 #endif
