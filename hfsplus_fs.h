@@ -618,4 +618,6 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_ut2mt(t)		__hfsp_ut2mt((t).tv_sec)
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
 
+//Remove for kernel 3.9+ these define an actual funtion by this name
+#define file_inode(file) file->f_path.dentry->d_inode
 #endif
