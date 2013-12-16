@@ -248,13 +248,8 @@ struct hfsplus_sb_info {
 
 	umode_t umask;
 	
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 	kuid_t uid;
 	kgid_t gid;
-#else
-	uid_t uid;
-	gid_t gid;
-#endif
 
 	int part, session;
 	unsigned long flags;
@@ -548,11 +543,7 @@ void hfsplus_inode_read_fork(struct inode *, struct hfsplus_fork_raw *);
 void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
 int hfsplus_cat_read_inode(struct inode *, struct hfs_find_data *);
 int hfsplus_cat_write_inode(struct inode *);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 struct inode *hfsplus_new_inode(struct super_block *, umode_t);
-#else
-struct inode *hfsplus_new_inode(struct super_block *, int);
-#endif
 
 void hfsplus_delete_inode(struct inode *);
 int hfsplus_file_fsync(struct file *file, loff_t start, loff_t end,
@@ -565,11 +556,7 @@ long hfsplus_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 int hfsplus_parse_options(char *, struct hfsplus_sb_info *);
 int hfsplus_parse_options_remount(char *input, int *force);
 void hfsplus_fill_defaults(struct hfsplus_sb_info *);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 int hfsplus_show_options(struct seq_file *, struct dentry *);
-#else
-int hfsplus_show_options(struct seq_file *, struct vfsmount *);
-#endif
 
 /* super.c */
 struct inode *hfsplus_iget(struct super_block *, unsigned long);
@@ -589,20 +576,12 @@ int hfsplus_uni2asc(struct super_block *,
 		const struct hfsplus_unistr *, char *, int *);
 int hfsplus_asc2uni(struct super_block *,
 		struct hfsplus_unistr *, int, const char *, int);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-int hfsplus_hash_dentry(const struct dentry *dentry, struct qstr *str);
-int hfsplus_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
-		unsigned int len, const char *str, const struct qstr *name);
-
-#else
 int hfsplus_hash_dentry(const struct dentry *dentry,
 		const struct inode *inode, struct qstr *str);
 int hfsplus_compare_dentry(const struct dentry *parent,
 		const struct inode *pinode,
 		const struct dentry *dentry, const struct inode *inode,
 		unsigned int len, const char *str, const struct qstr *name);
-#endif
-
 
 /* wrapper.c */
 int hfsplus_read_wrapper(struct super_block *);
@@ -632,18 +611,5 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_mt2ut(t)		(struct timespec){ .tv_sec = __hfsp_mt2ut(t) }
 #define hfsp_ut2mt(t)		__hfsp_ut2mt((t).tv_sec)
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
-
-//new function not present before
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
-#define set_nlink(node,i) node = i
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
-#define	i_uid_read(inode) inode->i_uid
-#define i_uid_write(inode, uid) inode->i_uid = uid
-
-#define	i_gid_read(inode) inode->i_gid
-#define i_gid_write(inode, gid) inode->i_gid = gid
-#endif
 
 #endif
