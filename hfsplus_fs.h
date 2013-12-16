@@ -620,4 +620,6 @@ int hfsplus_journaled_get_block(struct page *page);
 #define i_gid_write(inode, gid) inode->i_gid = gid
 #endif
 
+//Remove for kernel 3.9+ these define an actual funtion by this name
+#define file_inode(file) file->f_path.dentry->d_inode
 #endif
