@@ -221,26 +221,20 @@ done:
 
 	return 1;
 }
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 int hfsplus_show_options(struct seq_file *seq, struct dentry *root)
-#else
-int hfsplus_show_options(struct seq_file *seq, struct vfsmount *mnt)
-#endif
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(root->d_sb);
-#else
-	struct hfsplus_sb_info *sbi = HFSPLUS_SB(mnt->mnt_sb);
-#endif
+	
 	if (sbi->creator != HFSPLUS_DEF_CR_TYPE)
 		seq_printf(seq, ",creator=%.4s", (char *)&sbi->creator);
 	if (sbi->type != HFSPLUS_DEF_CR_TYPE)
 		seq_printf(seq, ",type=%.4s", (char *)&sbi->type);
-	seq_printf(seq, ",umask=%o,uid=%u,gid=%u", sbi->umask,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
+	seq_printf(seq, ",umask=%o,uid=%u,gid=%u", sbi->umask,
 			from_kuid_munged(&init_user_ns, sbi->uid),
 			from_kgid_munged(&init_user_ns, sbi->gid));
 #else
+	seq_printf(seq, ",umask=%o,uid=%u,gid=%u", sbi->umask,
 			sbi->uid, sbi->gid);
 #endif
 	if (sbi->part >= 0)
