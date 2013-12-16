@@ -334,12 +334,7 @@ int hfsplus_asc2uni(struct super_block *sb,
  * Composed unicode characters are decomposed and case-folding is performed
  * if the appropriate bits are (un)set on the superblock.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 int hfsplus_hash_dentry(const struct dentry *dentry, struct qstr *str)
-#else
-int hfsplus_hash_dentry(const struct dentry *dentry, const struct inode *inode,
-		struct qstr *str)
-#endif
 {
 	struct super_block *sb = dentry->d_sb;
 	const char *astr;
@@ -390,15 +385,8 @@ int hfsplus_hash_dentry(const struct dentry *dentry, const struct inode *inode,
  * Composed unicode characters are decomposed and case-folding is performed
  * if the appropriate bits are (un)set on the superblock.
  */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 int hfsplus_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name)
-#else
-int hfsplus_compare_dentry(const struct dentry *parent,
-		const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
-		unsigned int len, const char *str, const struct qstr *name)
-#endif
 {
 	struct super_block *sb = parent->d_sb;
 	int casefold, decompose, size;
