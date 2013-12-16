@@ -153,13 +153,8 @@ static ssize_t hfsplus_direct_IO(int rw, struct kiocb *iocb,
 	struct inode *inode = file_inode(file)->i_mapping->host;
 	ssize_t ret;
 
-#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,2,30)
-	ret = blockdev_direct_IO(rw, iocb, inode, inode->i_sb->s_bdev, iov,
-							 offset, nr_segs, hfsplus_get_block, NULL);
-#else
 	ret = blockdev_direct_IO(rw, iocb, inode, iov, offset, nr_segs,
 				 hfsplus_get_block);
-#endif
 
 	/*
 	 * In case of error extending write may have instantiated a few
@@ -230,13 +225,8 @@ const struct dentry_operations hfsplus_dentry_operations = {
 	.d_compare    = hfsplus_compare_dentry,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 static struct dentry *hfsplus_file_lookup(struct inode *dir,
 		struct dentry *dentry, unsigned int flags)
-#else
-static struct dentry *hfsplus_file_lookup(struct inode *dir,
-		struct dentry *dentry, struct nameidata *nd)
-#endif
 {
 	struct hfs_find_data fd;
 	struct super_block *sb = dir->i_sb;
@@ -456,11 +446,8 @@ static const struct file_operations hfsplus_file_operations = {
 	.release	= hfsplus_file_release,
 	.unlocked_ioctl = hfsplus_ioctl,
 };
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
+
 struct inode *hfsplus_new_inode(struct super_block *sb, umode_t mode)
-#else
-struct inode *hfsplus_new_inode(struct super_block *sb, int mode)
-#endif
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(sb);
 	struct inode *inode = new_inode(sb);
