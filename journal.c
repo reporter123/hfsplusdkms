@@ -357,24 +357,10 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 			return HFSPLUS_JOURNAL_FAIL;
 		}
 
-		/* Set sector number and buffer size
-		* Check with Allocation, Extent, Catalog and Attribute file.
-		* This is compared in order of the fequency of their occurance.
-		*/
+		/* Set sector number and buffer size*/
 		hfs_dbg(JTRANS, "Need to write block number: %x to journal log\n", block_num);
-		if ((block_num >= jnl->catalog_block) && (block_num <= jnl->catalog_block + HFSPLUS_I(inode)->first_blocks)) {
-			sector_num = (block_num * sb->s_blocksize) / HFSPLUS_SECTOR_SIZE;
-			bufsize = PAGE_SIZE;
-		} else if ((block_num >= jnl->alloc_block) && (block_num <= jnl->alloc_block + HFSPLUS_I(inode)->first_blocks)) {
-			sector_num = (block_num * sb->s_blocksize) / HFSPLUS_SECTOR_SIZE;
-			bufsize = PAGE_SIZE;
-		} else if ((block_num >= jnl->ext_block) && (block_num <= jnl->ext_block + HFSPLUS_I(inode)->first_blocks)) {
-			sector_num = (block_num * sb->s_blocksize) / HFSPLUS_SECTOR_SIZE;
-			bufsize = PAGE_SIZE;
-		} else if ((block_num >= jnl->attr_block) && (block_num <= jnl->attr_block + HFSPLUS_I(inode)->first_blocks)) {
-			sector_num = (block_num * sb->s_blocksize) / HFSPLUS_SECTOR_SIZE;
-			bufsize = PAGE_SIZE;
-		}
+		sector_num = (block_num * sb->s_blocksize) / HFSPLUS_SECTOR_SIZE;
+		bufsize = PAGE_SIZE;
 	} else {
 	/* Must be Volume Header */
 		sector_num = HFSPLUS_VOLHEAD_SECTOR;
@@ -382,11 +368,6 @@ int hfsplus_journaled_start_transaction(struct page *page, struct super_block *s
 	}
 
 	hfs_dbg(JTRANS, "sector number: %llx, bufsize: %x\n", sector_num, bufsize);
-	if (sector_num == 0 || bufsize == 0) {
-		pr_err("HFS+-fs: Wrong sector number: %llx or buffer size: %x. Block number: %x\n", sector_num, bufsize, block_num);
-		up(&jnl->jnl_lock);
-		return HFSPLUS_JOURNAL_FAIL;
-	}
 
 	/* Check space in journal log for new transaction */
 	total_size = jnl->jhdr->blhdr_size + bufsize;
