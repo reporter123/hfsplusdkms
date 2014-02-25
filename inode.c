@@ -130,8 +130,8 @@ static int hfsplus_journaled_writepage(struct page *page, struct writeback_contr
 	loff_t i_size = i_size_read(inode);
 	const pgoff_t end_index = i_size >> PAGE_CACHE_SHIFT;
 
-   /* Is the page fully inside i_size? */
-   if (page->index < end_index) {
+	/* Is the page fully inside i_size? */
+	if (page->index < end_index) {
 		jnl_ret = hfsplus_journaled_start_transaction(page, NULL);
 
 		ret = block_write_full_page(page, hfsplus_get_block, wbc);

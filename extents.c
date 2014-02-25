@@ -623,8 +623,7 @@ int hfsplus_journaled_get_block(struct page *page)
     res = hfsplus_ext_read_extent(inode, ablock);
     if (!res) {
       mutex_lock(&hip->extents_lock);
-      block_num = hfsplus_ext_find_block(hip->cached_extents, ablock -
-      hip->cached_start);
+      block_num = hfsplus_ext_find_block(hip->cached_extents, ablock - hip->cached_start);
       mutex_unlock(&hip->extents_lock);
     } else {
       mutex_unlock(&hip->extents_lock);
