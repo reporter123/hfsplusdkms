@@ -1,8 +1,10 @@
-hfsplus-dkms (1.1.2ppa3~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.3ppa1~saucy1) saucy; urgency=low
 
   *merge from mainline 3.12r4
+  *add file data journaling support closes #1
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 16 Dec 2013 21:14:16 -0500
+
 
 hfsplus-dkms (1.1.2ppa2~saucy1) saucy; urgency=low
 
