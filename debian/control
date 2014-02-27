@@ -3,7 +3,7 @@ Section: misc
 Priority: optional
 Maintainer: Michael Reeves <reeves.87@gmail.com>
 Build-Depends: debhelper (>= 7.0.50), dkms [linux-any], linux-headers-686-pae (>=3.0.0) | linux-headers-amd64 (>=3.0.0) | linux-headers-generic (>=3.0.0) | linux-headers (>=3.0.0)
-Standards-Version: 3.9.3
+Standards-Version: 3.9.4
 Homepage: 
 
 Package: hfsplus-dkms
