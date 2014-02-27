@@ -1,11 +1,18 @@
-hfsplus-dkms (1.1.3ppa2~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.3ppa3~trusty1) trusty; urgency=low
+
+  *no change rebuild
+
+ -- Michael Reeves <reeves.87@gmail.com>  Mon, 16 Dec 2013 21:14:16 -0500
+
+
+hfsplus-dkms (1.1.3ppa2~trusty1) trusty; urgency=low
 
   *bumped standards version
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 16 Dec 2013 21:14:16 -0500
 
 
-hfsplus-dkms (1.1.3ppa1~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.3ppa1~trusty1) trusty; urgency=low
 
   *merge from mainline 3.12r4
   *add file data journaling support closes #1
@@ -13,13 +20,13 @@ hfsplus-dkms (1.1.3ppa1~saucy1) saucy; urgency=low
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 16 Dec 2013 21:14:16 -0500
 
 
-hfsplus-dkms (1.1.2ppa2~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.2ppa2~trusty1) trusty; urgency=low
 
   *merge from mainline 3.11
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 16 Dec 2013 21:14:16 -0500
 
-hfsplus-dkms (1.1.2ppa1~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.2ppa1~trusty1) trusty; urgency=low
 
   * merge from mainline 3.8
   * i_uid_read, i_uid_write, i_gid_read and i_gid_write #defined on old systems that don't have them
@@ -29,7 +36,7 @@ hfsplus-dkms (1.1.2ppa1~saucy1) saucy; urgency=low
 
  -- Michael Reeves <reeves.87@gmail.com>  Sat, 16 Feb 2013 23:58:41 -0500
 
-hfsplus-dkms (1.1.1ppa1~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.1ppa1~trusty1) trusty; urgency=low
 
   * merge with upstream 3.7.6 kernel source
   * fixed possiable write failure on drives with > 512KB blocks.
@@ -37,11 +44,11 @@ hfsplus-dkms (1.1.1ppa1~saucy1) saucy; urgency=low
 
  -- Michael Reeves <reeves.87@gmail.com>  Tue, 12 Feb 2013 17:12:51 -0500
 
-hfsplus-dkms (1.1.0ppa1~saucy1) saucy; urgency=low
+hfsplus-dkms (1.1.0ppa1~trusty1) trusty; urgency=low
   *no change rebuild
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 21 Jan 2013 16:47:47 -0500
 
-hfsplus-dkms (1.1.0ppa1) saucy; urgency=low
+hfsplus-dkms (1.1.0ppa1) trusty; urgency=low
 
   * change linux-header version requirement
   * make package work with oneiric under pbuilder
@@ -49,7 +56,7 @@ hfsplus-dkms (1.1.0ppa1) saucy; urgency=low
   --all users of this package get this feature
  -- Michael Reeves <reeves.87@gmail.com>  Thu, 20 Dec 2012 16:01:47 -0500
 
-hfsplus-dkms (1.0ppa4) saucy; urgency=low
+hfsplus-dkms (1.0ppa4) trusty; urgency=low
 
   *updated for kernel 3.5
   *compile ok for 3.2 headers
@@ -59,13 +66,13 @@ hfsplus-dkms (1.0ppa4) saucy; urgency=low
  -- Michael Reeves <reeves.87@gmail.com>  Wed, 19 Dec 2012 20:30:44 -0400
 
 
-hfsplus-dkms (1.0ppa3) saucy; urgency=low
+hfsplus-dkms (1.0ppa3) trusty; urgency=low
 
   * fix packaging
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 13 Dec 2012 16:25:01 -0400
 
-hfsplus-dkms (1.0ppa2) saucy; urgency=low
+hfsplus-dkms (1.0ppa2) trusty; urgency=low
 
   * really activate journaling.
   * fix a build error on older 3.x kernel headers
@@ -73,7 +80,7 @@ hfsplus-dkms (1.0ppa2) saucy; urgency=low
 
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 13 Dec 2012 16:25:01 -0400
 
-hfsplus-dkms (1.0ppa1) saucy; urgency=low
+hfsplus-dkms (1.0ppa1) trusty; urgency=low
 
   * Initial release of dkms package
 
