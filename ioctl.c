@@ -79,11 +79,8 @@ static int hfsplus_ioctl_setflags(struct file *file, int __user *user_flags)
 	unsigned int flags;
 	int err = 0;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 	err = mnt_want_write_file(file);
-#else
-	err = mnt_want_write(file->f_path.mnt);
-#endif
+
 	if (err)
 		goto out;
 
@@ -134,11 +131,7 @@ static int hfsplus_ioctl_setflags(struct file *file, int __user *user_flags)
 out_unlock_inode:
 	mutex_unlock(&inode->i_mutex);
 out_drop_write:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 	mnt_drop_write_file(file);
-#else
-	mnt_drop_write(file->f_path.mnt);
-#endif
 out:
 	return err;
 }

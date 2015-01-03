@@ -26,13 +26,8 @@ static inline void hfsplus_instantiate(struct dentry *dentry,
 }
 
 /* Find the entry inside dir named dentry->d_name */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
 static struct dentry *hfsplus_lookup(struct inode *dir, struct dentry *dentry,
 				     unsigned int flags)
-#else
-static struct dentry *hfsplus_lookup(struct inode *dir, struct dentry *dentry,
-				     struct nameidata *nd)
-#endif
 {
 	struct inode *inode = NULL;
 	struct hfs_find_data fd;
@@ -148,7 +143,7 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 #else
 	pos=file->f_pos;
 #endif
-	
+
 	if (file->f_pos >= inode->i_size)
 		return 0;
 
@@ -201,7 +196,7 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 			goto out;
 		pos = 2;
 	}
-	
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 	ctx->pos=pos;
 #else
@@ -278,7 +273,7 @@ next:
 		pos++;
 		if (pos >= inode->i_size)
 			goto out;
-		
+
 		err = hfs_brec_goto(&fd, 1);
 		if (err)
 			goto out;
@@ -496,13 +491,8 @@ out:
 	return res;
 }
 //abi change at least 3.5+
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 static int hfsplus_mknod(struct inode *dir, struct dentry *dentry,
 			 umode_t mode, dev_t rdev)
-#else
-static int hfsplus_mknod(struct inode *dir, struct dentry *dentry,
-			 int mode, dev_t rdev)
-#endif
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(dir->i_sb);
 	struct inode *inode;
@@ -542,25 +532,13 @@ out:
 	return res;
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0)
 static int hfsplus_create(struct inode *dir, struct dentry *dentry, umode_t mode,
 			  bool excl)
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
-static int hfsplus_create(struct inode *dir, struct dentry *dentry, umode_t mode,
-			  struct nameidata *nd)
-#else
-static int hfsplus_create(struct inode *dir, struct dentry *dentry, int mode,
-			  struct nameidata *nd)
-#endif
 {
 	return hfsplus_mknod(dir, dentry, mode, 0);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 static int hfsplus_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode)
-#else
-static int hfsplus_mkdir(struct inode *dir, struct dentry *dentry, int mode)
-#endif
 {
 	return hfsplus_mknod(dir, dentry, mode | S_IFDIR, 0);
 }

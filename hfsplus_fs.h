@@ -257,7 +257,7 @@ struct hfsplus_sb_info {
 	u32 type;
 
 	umode_t umask;
-	
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 	kuid_t uid;
 	kgid_t gid;
@@ -559,11 +559,8 @@ void hfsplus_inode_read_fork(struct inode *, struct hfsplus_fork_raw *);
 void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
 int hfsplus_cat_read_inode(struct inode *, struct hfs_find_data *);
 int hfsplus_cat_write_inode(struct inode *);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 struct inode *hfsplus_new_inode(struct super_block *, umode_t);
-#else
-struct inode *hfsplus_new_inode(struct super_block *, int);
-#endif
+
 
 void hfsplus_delete_inode(struct inode *);
 int hfsplus_file_fsync(struct file *file, loff_t start, loff_t end,
@@ -576,11 +573,7 @@ long hfsplus_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
 int hfsplus_parse_options(char *, struct hfsplus_sb_info *);
 int hfsplus_parse_options_remount(char *input, int *force);
 void hfsplus_fill_defaults(struct hfsplus_sb_info *);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
 int hfsplus_show_options(struct seq_file *, struct dentry *);
-#else
-int hfsplus_show_options(struct seq_file *, struct vfsmount *);
-#endif
 
 /* super.c */
 struct inode *hfsplus_iget(struct super_block *, unsigned long);
@@ -645,20 +638,10 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
 
 //new function not present before
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
-#define set_nlink(node,i) node = i
-#endif
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
-#define	i_uid_read(inode) inode->i_uid
-#define i_uid_write(inode, uid) inode->i_uid = uid
-
-#define	i_gid_read(inode) inode->i_gid
-#define i_gid_write(inode, gid) inode->i_gid = gid
-#endif
 
 //Remove for kernel 3.9+ these define an actual funtion by this name
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0)
 #define file_inode(file) file->f_path.dentry->d_inode
 #endif
+
 #endif
