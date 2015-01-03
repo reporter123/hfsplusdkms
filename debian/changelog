@@ -47,6 +47,11 @@ hfsplus-dkms (1.1.1ppa1~trusty1) trusty; urgency=low
 hfsplus-dkms (1.1.0ppa1~trusty1) trusty; urgency=low
   *no change rebuild
  -- Michael Reeves <reeves.87@gmail.com>  Mon, 21 Jan 2013 16:47:47 -0500
+hfsplus-dkms (1.2.0ppa1) trusty; urgency=low
+
+  * require kernel 3.6 mininium
+  * update for 3.16
+ -- Michael Reeves <reeves.87@gmail.com>  Jan, 3 Dec 2015 15:11:00 -0500
 
 hfsplus-dkms (1.1.0ppa1) trusty; urgency=low
 
