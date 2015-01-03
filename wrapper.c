@@ -74,7 +74,11 @@ int hfsplus_submit_bio(struct super_block *sb, sector_t sector,
 	sector &= ~((io_size >> HFSPLUS_SECTOR_SHIFT) - 1);
 
 	bio = bio_alloc(GFP_NOIO, 1);
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(3,14,0)
+	bio->bi_iter.bi_sector = sector;
+#else
 	bio->bi_sector = sector;
+#endif
 	bio->bi_bdev = sb->s_bdev;
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(3,11,0)
 	bio->bi_end_io = hfsplus_end_io_sync;
