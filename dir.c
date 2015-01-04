@@ -122,11 +122,7 @@ fail:
 	return ERR_PTR(err);
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 static int hfsplus_readdir(struct file *file, struct dir_context *ctx)
-#else
-static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
-#endif
 {
 	struct inode *inode = file_inode(file);
 	struct super_block *sb = inode->i_sb;
@@ -136,13 +132,6 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 	struct hfs_find_data fd;
 	struct hfsplus_readdir_data *rd;
 	u16 type;
-	loff_t	pos;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-	pos=ctx->pos;
-#else
-	pos=file->f_pos;
-#endif
 
 	if (file->f_pos >= inode->i_size)
 		return 0;
@@ -155,17 +144,13 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 	if (err)
 		goto out;
 
-	if (pos == 0) {
+	if (ctx->pos == 0) {
 		/* This is completely artificial... */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 		if (!dir_emit_dot(file, ctx))
-#else
-		if (filldir(dirent, ".", 1, 0, inode->i_ino, DT_DIR))
-#endif
 			goto out;
-		pos = 1;
+		ctx->pos = 1;
 	}
-	if (pos == 1) {
+	if (ctx->pos == 1) {
 		if (fd.entrylength > sizeof(entry) || fd.entrylength < 0) {
 			err = -EIO;
 			goto out;
@@ -183,29 +168,14 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 			err = -EIO;
 			goto out;
 		}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-		ctx->pos=pos;
 		if (!dir_emit(ctx, "..", 2,
-			be32_to_cpu(entry.thread.parentID), DT_DIR))
-#else
-		file->f_pos=pos;
-		if (filldir(dirent, "..", 2, 1,
-			be32_to_cpu(entry.thread.parentID), DT_DIR))
-
-#endif
+			    be32_to_cpu(entry.thread.parentID), DT_DIR))
 			goto out;
-		pos = 2;
+		ctx->pos = 2;
 	}
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-	ctx->pos=pos;
-#else
-	file->f_pos=pos;
-#endif
-
-	if (pos >= inode->i_size)
+	if (ctx->pos >= inode->i_size)
 		goto out;
-	err = hfs_brec_goto(&fd, pos - 1);
+	err = hfs_brec_goto(&fd, ctx->pos - 1);
 	if (err)
 		goto out;
 	for (;;) {
@@ -238,15 +208,8 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 			    HFSPLUS_SB(sb)->hidden_dir->i_ino ==
 					be32_to_cpu(entry.folder.id))
 				goto next;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-			ctx->pos=pos;
 			if (!dir_emit(ctx, strbuf, len,
 				    be32_to_cpu(entry.folder.id), DT_DIR))
-#else
-			file->f_pos = pos;
-			if (filldir(dirent, strbuf, len, file->f_pos,
-				    be32_to_cpu(entry.folder.id), DT_DIR))
-#endif
 				break;
 		} else if (type == HFSPLUS_FILE) {
 			if (fd.entrylength < sizeof(struct hfsplus_cat_file)) {
@@ -254,15 +217,8 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 				err = -EIO;
 				goto out;
 			}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-			ctx->pos=pos;
 			if (!dir_emit(ctx, strbuf, len,
 				    be32_to_cpu(entry.file.id), DT_REG))
-#else
-			file->f_pos = pos;
-			if (filldir(dirent, strbuf, len, file->f_pos,
-				    be32_to_cpu(entry.file.id), DT_REG))
-#endif
 				break;
 		} else {
 			pr_err("bad catalog entry type\n");
@@ -270,10 +226,9 @@ static int hfsplus_readdir(struct file *file, void *dirent, filldir_t filldir)
 			goto out;
 		}
 next:
-		pos++;
-		if (pos >= inode->i_size)
+		ctx->pos++;
+		if (ctx->pos >= inode->i_size)
 			goto out;
-
 		err = hfs_brec_goto(&fd, 1);
 		if (err)
 			goto out;
@@ -291,11 +246,6 @@ next:
 	}
 	memcpy(&rd->key, fd.key, sizeof(struct hfsplus_cat_key));
 out:
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
-	ctx->pos=pos;
-#else
-	file->f_pos=pos;
-#endif
 	hfs_find_exit(&fd);
 	return err;
 }
@@ -490,7 +440,7 @@ out:
 	mutex_unlock(&sbi->vh_mutex);
 	return res;
 }
-//abi change at least 3.5+
+
 static int hfsplus_mknod(struct inode *dir, struct dentry *dentry,
 			 umode_t mode, dev_t rdev)
 {
@@ -579,20 +529,17 @@ const struct inode_operations hfsplus_dir_inode_operations = {
 	.setxattr		= generic_setxattr,
 	.getxattr		= generic_getxattr,
 	.listxattr		= hfsplus_listxattr,
-	.removexattr		= hfsplus_removexattr,
+	.removexattr		= generic_removexattr,
 #ifdef CONFIG_HFSPLUS_FS_POSIX_ACL
 	.get_acl		= hfsplus_get_posix_acl,
+	.set_acl		= hfsplus_set_posix_acl,
 #endif
 };
 
 const struct file_operations hfsplus_dir_operations = {
 	.fsync		= hfsplus_file_fsync,
 	.read		= generic_read_dir,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 	.iterate	= hfsplus_readdir,
-#else
-	.readdir	= hfsplus_readdir,
-#endif
 	.unlocked_ioctl = hfsplus_ioctl,
 	.llseek		= generic_file_llseek,
 	.release	= hfsplus_dir_release,

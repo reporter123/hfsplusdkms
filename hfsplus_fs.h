@@ -20,8 +20,6 @@
 #include <linux/mutex.h>
 #include <linux/buffer_head.h>
 #include <linux/blkdev.h>
-#include <linux/version.h>
-
 #include "hfsplus_raw.h"
 
 #define DBG_BNODE_REFS	0x00000001
@@ -257,14 +255,8 @@ struct hfsplus_sb_info {
 	u32 type;
 
 	umode_t umask;
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 	kuid_t uid;
 	kgid_t gid;
-#else
-	uid_t uid;
-	gid_t gid;
-#endif
 
 	int part, session;
 	unsigned long flags;
@@ -561,8 +553,6 @@ void hfsplus_inode_write_fork(struct inode *, struct hfsplus_fork_raw *);
 int hfsplus_cat_read_inode(struct inode *, struct hfs_find_data *);
 int hfsplus_cat_write_inode(struct inode *);
 struct inode *hfsplus_new_inode(struct super_block *, umode_t);
-
-
 void hfsplus_delete_inode(struct inode *);
 int hfsplus_file_fsync(struct file *file, loff_t start, loff_t end,
 		       int datasync);
@@ -594,20 +584,9 @@ int hfsplus_uni2asc(struct super_block *,
 		const struct hfsplus_unistr *, char *, int *);
 int hfsplus_asc2uni(struct super_block *,
 		struct hfsplus_unistr *, int, const char *, int);
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 int hfsplus_hash_dentry(const struct dentry *dentry, struct qstr *str);
 int hfsplus_compare_dentry(const struct dentry *parent, const struct dentry *dentry,
 		unsigned int len, const char *str, const struct qstr *name);
-
-#else
-int hfsplus_hash_dentry(const struct dentry *dentry,
-		const struct inode *inode, struct qstr *str);
-int hfsplus_compare_dentry(const struct dentry *parent,
-		const struct inode *pinode,
-		const struct dentry *dentry, const struct inode *inode,
-		unsigned int len, const char *str, const struct qstr *name);
-#endif
-
 
 /* wrapper.c */
 int hfsplus_read_wrapper(struct super_block *);
@@ -637,12 +616,5 @@ int hfsplus_journaled_get_block(struct page *page);
 #define hfsp_mt2ut(t)		(struct timespec){ .tv_sec = __hfsp_mt2ut(t) }
 #define hfsp_ut2mt(t)		__hfsp_ut2mt((t).tv_sec)
 #define hfsp_now2mt()		__hfsp_ut2mt(get_seconds())
-
-//new function not present before
-
-//Remove for kernel 3.9+ these define an actual funtion by this name
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,9,0)
-#define file_inode(file) file->f_path.dentry->d_inode
-#endif
 
 #endif

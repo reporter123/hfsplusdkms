@@ -135,30 +135,22 @@ int hfsplus_parse_options(char *input, struct hfsplus_sb_info *sbi)
 				pr_err("uid requires an argument\n");
 				return 0;
 			}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 			sbi->uid = make_kuid(current_user_ns(), (uid_t)tmp);
 			if (!uid_valid(sbi->uid)) {
 				pr_err("invalid uid specified\n");
 				return 0;
 			}
-#else
-			sbi->uid = (uid_t)tmp;
-#endif
 			break;
 		case opt_gid:
 			if (match_int(&args[0], &tmp)) {
 				pr_err("gid requires an argument\n");
 				return 0;
 			}
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 			sbi->gid = make_kgid(current_user_ns(), (gid_t)tmp);
 			if (!gid_valid(sbi->gid)) {
 				pr_err("invalid gid specified\n");
 				return 0;
 			}
-#else
-			sbi->gid = (gid_t)tmp;
-#endif
 			break;
 		case opt_part:
 			if (match_int(&args[0], &sbi->part)) {
@@ -221,6 +213,7 @@ done:
 
 	return 1;
 }
+
 int hfsplus_show_options(struct seq_file *seq, struct dentry *root)
 {
 	struct hfsplus_sb_info *sbi = HFSPLUS_SB(root->d_sb);
@@ -230,12 +223,8 @@ int hfsplus_show_options(struct seq_file *seq, struct dentry *root)
 	if (sbi->type != HFSPLUS_DEF_CR_TYPE)
 		seq_printf(seq, ",type=%.4s", (char *)&sbi->type);
 	seq_printf(seq, ",umask=%o,uid=%u,gid=%u", sbi->umask,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,7,0)
 			from_kuid_munged(&init_user_ns, sbi->uid),
 			from_kgid_munged(&init_user_ns, sbi->gid));
-#else
-			sbi->uid, sbi->gid);
-#endif
 	if (sbi->part >= 0)
 		seq_printf(seq, ",part=%u", sbi->part);
 	if (sbi->session >= 0)

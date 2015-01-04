@@ -36,7 +36,7 @@ static void hfsplus_write_failed(struct address_space *mapping, loff_t to)
 	struct inode *inode = mapping->host;
 
 	if (to > inode->i_size) {
-		truncate_pagecache(inode, to, inode->i_size);
+		truncate_pagecache(inode, inode->i_size);
 		hfsplus_file_truncate(inode);
 	}
 }
@@ -226,13 +226,8 @@ const struct dentry_operations hfsplus_dentry_operations = {
 	.d_compare    = hfsplus_compare_dentry,
 };
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,11,0)
 static struct dentry *hfsplus_file_lookup(struct inode *dir,
 		struct dentry *dentry, unsigned int flags)
-#else
-static struct dentry *hfsplus_file_lookup(struct inode *dir,
-		struct dentry *dentry, struct nameidata *nd)
-#endif
 {
 	struct hfs_find_data fd;
 	struct super_block *sb = dir->i_sb;
@@ -372,7 +367,7 @@ static int hfsplus_setattr(struct dentry *dentry, struct iattr *attr)
 	mark_inode_dirty(inode);
 
 	if (attr->ia_valid & ATTR_MODE) {
-		error = hfsplus_posix_acl_chmod(inode);
+		error = posix_acl_chmod(inode, inode->i_mode);
 		if (unlikely(error))
 			return error;
 	}
@@ -443,9 +438,10 @@ static const struct inode_operations hfsplus_file_inode_operations = {
 	.setxattr	= generic_setxattr,
 	.getxattr	= generic_getxattr,
 	.listxattr	= hfsplus_listxattr,
-	.removexattr	= hfsplus_removexattr,
+	.removexattr	= generic_removexattr,
 #ifdef CONFIG_HFSPLUS_FS_POSIX_ACL
 	.get_acl	= hfsplus_get_posix_acl,
+	.set_acl	= hfsplus_set_posix_acl,
 #endif
 };
 

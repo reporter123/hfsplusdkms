@@ -178,7 +178,6 @@ static void hfsplus_evict_inode(struct inode *inode)
 	hfs_dbg(INODE, "hfsplus_evict_inode: %lu\n", inode->i_ino);
 	truncate_inode_pages(&inode->i_data, 0);
 	clear_inode(inode);
-
 	if (HFSPLUS_IS_RSRC(inode)) {
 		HFSPLUS_I(HFSPLUS_I(inode)->rsrc_inode)->rsrc_inode = NULL;
 		iput(HFSPLUS_I(inode)->rsrc_inode);
@@ -497,7 +496,6 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 	if ((last_fs_block > (sector_t)(~0ULL) >> (sbi->alloc_blksz_shift - 9)) ||
 	    (last_fs_page > (pgoff_t)(~0ULL))) {
 		pr_err("filesystem size too large\n");
-		err = -EFBIG;
 		goto out_free_vhdr;
 	}
 
@@ -625,9 +623,8 @@ static int hfsplus_fill_super(struct super_block *sb, void *data, int silent)
 				err = -ENOMEM;
 				goto out_put_root;
 			}
-
-			err = hfsplus_create_cat(sbi->hidden_dir->i_ino, root, &str,
-					   sbi->hidden_dir);
+			err = hfsplus_create_cat(sbi->hidden_dir->i_ino, root,
+						 &str, sbi->hidden_dir);
 			if (err) {
 				mutex_unlock(&sbi->vh_mutex);
 				goto out_put_hidden_dir;
