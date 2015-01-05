@@ -740,11 +740,6 @@ static int hfsplus_removexattr(struct inode *inode, const char *name)
 	int is_xattr_acl_deleted = 0;
 	int is_all_xattrs_deleted = 0;
 
-	if ((!S_ISREG(inode->i_mode) &&
-			!S_ISDIR(inode->i_mode)) ||
-				HFSPLUS_IS_RSRC(inode))
-		return -EOPNOTSUPP;
-
 	if (!HFSPLUS_SB(inode->i_sb)->attr_tree)
 		return -EOPNOTSUPP;
 
